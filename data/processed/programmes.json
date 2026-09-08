@@ -1,0 +1,110 @@
+[
+    {
+        "ID": "PROG_001",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Animation and Visual Effects",
+        "Faculty": "FOICDT",
+        "Duration": "3 Yrs Full Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme aims to produce graduates with practical knowledge and skills to develop animation and visual effects films for the industry. It provides grounding in Digital Graphics, 3D Animation and Visual Effects, Photography and Film Editing.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_002",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Applied Computing",
+        "Faculty": "FOICDT",
+        "Duration": "3 Yrs Full Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme aims to produce graduates with practical knowledge and skills to develop, enhance and maintain computing applications using classic and leading-edge computing concepts and technologies. Areas include Computer and Web Programming, Database Systems, Internet and Communication Technologies, and applications of IT in Health, Finance and Environment.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_003",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Computer Science",
+        "Faculty": "FOICDT",
+        "Duration": "3 Yrs Full Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme develops problem-solving skills and exposes students to the analysis, design and development of computer systems while following professional and ethical principles. It offers a range of specialisations and may lead to postgraduate studies at Master's and Doctoral level.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_004",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Information System",
+        "Faculty": "FOICDT",
+        "Duration": "3 Yrs Full Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme provides knowledge and analytical skills to develop and manage business information systems. It integrates business, information and computing technology for the analysis, design, implementation and management of information systems.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_005",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Software Engineering",
+        "Faculty": "FOICDT",
+        "Duration": "3 Yrs Full Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme focuses on skills required for careers in the software industry, particularly the process of building software according to specifications. It covers software engineering concepts, high-level designs and solutions used in the development of software projects and products.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_006",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Cybersecurity",
+        "Faculty": "FOICDT",
+        "Duration": "3 Yrs Full Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme aims to equip students with knowledge and skills required by the cybersecurity industry. It focuses on cybersecurity principles, technologies and practices and prepares students for professional practice and postgraduate studies. The programme is aligned with international cybersecurity curriculum guidelines.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_007",
+        "Category": "Programme",
+        "Subcategory": "Undergraduate",
+        "Title": "BSc (Hons) Cybersecurity (Top Up)",
+        "Faculty": "FOICDT",
+        "Duration": "1 .5 Yrs Part Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme builds on principles, tools and techniques studied during a Diploma programme. It aims to prepare students for professional practice in cybersecurity and for further postgraduate studies.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/undergraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_008",
+        "Category": "Programme",
+        "Subcategory": "Postgraduate",
+        "Title": "MSc Artificial Intelligence",
+        "Faculty": "FOICDT",
+        "Duration": "2 Yrs Part Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The MSc Artificial Intelligence programme develops core data analysis skills and exposes students to traditional and state-of-the-art areas of artificial intelligence and machine learning. It is offered in blended mode using both face-to-face and online learning.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/postgraduate",
+        "Verification Status": "Verified"
+    },
+    {
+        "ID": "PROG_009",
+        "Category": "Programme",
+        "Subcategory": "Postgraduate",
+        "Title": "MSc Software Project Management",
+        "Faculty": "FOICDT",
+        "Duration": "2 Yrs Part Time",
+        "Academic Year": "2026/2027",
+        "Programme Description": "The programme is designed for Computing graduates and aims to enhance leadership, communication, software project management and IT management skills. It is particularly relevant for graduates seeking greater managerial responsibilities in the IT sector.",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/programmes/postgraduate",
+        "Verification Status": "Verified"
+    }
+]

@@ -1,0 +1,98 @@
+[
+    {
+        "ID": "ADM_001",
+        "Category": "Admission",
+        "Subcategory": "Required Documents",
+        "Title": "General Documents Required for Mauritian Applicants",
+        "Faculty": "University-wide",
+        "Applicant Type": "Mauritian",
+        "Description": "Applicants are required to upload their: Birth Certificate, Marriage Certificate if applicable, National Identity Card, School Certificate, Higher School Certificate or HSC results, proof of payment of application fees, and a passport-size photo. Applicants holding qualifications other than SC or HSC should also upload the relevant qualifications.",
+        "Contact Email": "admission@uom.ac.mu",
+        "Source URL": "https://apply.uom.ac.mu/application/HowToApply.aspx",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "ADM_002",
+        "Category": "Admission",
+        "Subcategory": "Eligibility",
+        "Title": "University of Mauritius Eligibility Toolkit",
+        "Faculty": "University-wide",
+        "Applicant Type": "Prospective Students",
+        "Description": "Applicants can use the University of Mauritius Eligibility Toolkit to obtain guidance on programmes for which they may be eligible according to their qualifications and results.",
+        "Contact Email": "admission@uom.ac.mu",
+        "Source URL": "https://toolkit.uom.ac.mu/toolkit/newlogin.aspx",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "ADM_003",
+        "Category": "Admission",
+        "Subcategory": "Fees",
+        "Title": "Administrative Fees",
+        "Faculty": "University-wide",
+        "Applicant Type": "Eligible Students",
+        "Description": "The UoM source refers to an administrative fee of Rs10,000 per year under specific conditions related to the Free Tertiary Education Scheme. The complete applicable conditions should be verified from the original UoM source before this information is used by the chatbot.",
+        "Contact Email": "admission@uom.ac.mu",
+        "Source URL": "https://drive.google.com/file/d/1fblPz_F70CqvaELyZwJ8BiOV7KRq2RJS/view",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "ADM_004",
+        "Category": "Admission",
+        "Subcategory": "Payment Facilities",
+        "Title": "Payment of Annual / Applicable Fees",
+        "Faculty": "University-wide",
+        "Applicant Type": "Students",
+        "Description": "The University of Mauritius provides different facilities for the payment of applicable fees. For detailed information on the available payment methods, procedures and instructions, please refer to the official University of Mauritius payment information through the link provided.",
+        "Contact Email": "admission@uom.ac.mu",
+        "Source URL": "https://drive.google.com/file/d/1Z-c6tD296iNNQPTHCJ_7oBF6syvolzzZ/view",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "FAC_001",
+        "Category": "Faculty Information",
+        "Subcategory": "Department",
+        "Title": "Department of Digital Technologies",
+        "Faculty": "FOICDT",
+        "Applicant Type": "",
+        "Description": "The Department of Digital Technologies is one of the departments under the Faculty of Information, Communication and Digital Technologies. The Head of Department is Dr Anisah W. Ghoorah.",
+        "Contact Email": "hodfoicdt_dt@uom.ac.mu",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/digital-technologies-department",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "FAC_002",
+        "Category": "Faculty Information",
+        "Subcategory": "Department",
+        "Title": "Department of Information and Communication Technology",
+        "Faculty": "FOICDT",
+        "Applicant Type": "",
+        "Description": "The Department of Information and Communication Technology is one of the departments under FOICDT. The Head of Department is Dr Paramasiven Appavoo.",
+        "Contact Email": "hodfoicdt_ict@uom.ac.mu",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/information-and-communication-technologies-department",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "FAC_003",
+        "Category": "Faculty Information",
+        "Subcategory": "Department",
+        "Title": "Department of Software and Information Systems",
+        "Faculty": "FOICDT",
+        "Applicant Type": "",
+        "Description": "The Department of Software and Information Systems is one of the departments under FOICDT. The Head of Department is Leckraj Nagowah.",
+        "Contact Email": "hodfoicdt_sis@uom.ac.mu",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php/software-and-information-systems",
+        "Verified Status": "Verified"
+    },
+    {
+        "ID": "FAC_004",
+        "Category": "Faculty Information",
+        "Subcategory": "Faculty Administration",
+        "Title": "Dean of FOICDT",
+        "Faculty": "FOICDT",
+        "Applicant Type": "",
+        "Description": "The Dean of the Faculty of Information, Communication and Digital Technologies is Assoc Prof M. Heenaye-Mamode Khan. Phone extension: 7784.",
+        "Contact Email": "deanfoicdt@uom.ac.mu",
+        "Source URL": "https://www.uom.ac.mu/foicdt/index.php",
+        "Verified Status": "Verified"
+    }
+]
