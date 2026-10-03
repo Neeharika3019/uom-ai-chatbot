@@ -563,6 +563,9 @@ def detect_list_intent(question):
     "Show me all bachelor's programmes."
         -> True
 
+    "List every undergraduate degree."
+        -> True
+
     "Which undergraduate programmes are three years?"
         -> True
 
@@ -619,6 +622,7 @@ def detect_list_intent(question):
         "show me all",
         "list all",
         "list the",
+        "list every",
         "all the",
         "which programmes",
         "which programs",
@@ -633,7 +637,7 @@ def detect_list_intent(question):
 
 
     # -----------------------------------------------------
-    # Specific BSc / MSc request should remain semantic
+    # Specific BSc / MSc request should remain hybrid
     # unless the user explicitly asks for a group/list.
     # -----------------------------------------------------
 
@@ -653,6 +657,7 @@ def detect_list_intent(question):
         "show me all",
         "list all",
         "list the",
+        "list every",
         "all the",
         "what are the",
         "what are",
@@ -661,7 +666,12 @@ def detect_list_intent(question):
         "which degrees",
         "which courses",
         "different departments",
-        "each department"
+        "each department",
+        "every undergraduate",
+        "every postgraduate",
+        "every degree",
+        "every programme",
+        "every program"
     ]
 
     if any(
@@ -669,6 +679,54 @@ def detect_list_intent(question):
         for signal in explicit_list_signals
     ):
         return True
+
+
+    # -----------------------------------------------------
+    # General "every" wording
+    #
+    # Examples:
+    # "every undergraduate degree"
+    # "every postgraduate programme"
+    # -----------------------------------------------------
+
+    if contains_phrase(
+        q,
+        "every"
+    ):
+
+        if (
+            detect_undergraduate_request(
+                question
+            )
+            or detect_postgraduate_request(
+                question
+            )
+            or contains_phrase(
+                q,
+                "degree"
+            )
+            or contains_phrase(
+                q,
+                "degrees"
+            )
+            or contains_phrase(
+                q,
+                "programme"
+            )
+            or contains_phrase(
+                q,
+                "programmes"
+            )
+            or contains_phrase(
+                q,
+                "program"
+            )
+            or contains_phrase(
+                q,
+                "programs"
+            )
+        ):
+            return True
 
 
     # -----------------------------------------------------
@@ -1457,6 +1515,11 @@ def retrieve(
 if __name__ == "__main__":
 
     test_questions = [
+
+        (
+            "List every undergraduate degree "
+            "available under FOICDT."
+        ),
 
         (
             "Can I have a description about the "
