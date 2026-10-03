@@ -48,7 +48,7 @@ with open(
 
 
 # =========================================================
-# Stop words used for title matching
+# Stop words for title matching
 # =========================================================
 
 STOP_WORDS = {
@@ -78,10 +78,12 @@ STOP_WORDS = {
     "can",
     "could",
     "would",
+    "should",
     "uom",
     "university",
     "offer",
     "offers",
+    "offered",
     "available",
     "programme",
     "programmes",
@@ -96,17 +98,19 @@ STOP_WORDS = {
 
 
 # =========================================================
-# Text normalisation
+# Normalise text
 # =========================================================
 
 def normalize_text(text):
     """
-    Normalise text for easier rule matching.
+    Convert text to lowercase and simplify spaces
+    and punctuation for easier rule matching.
     """
 
     text = str(text).lower()
 
     text = text.replace("-", " ")
+    text = text.replace("’", "'")
 
     text = re.sub(
         r"\s+",
@@ -118,13 +122,40 @@ def normalize_text(text):
 
 
 # =========================================================
-# Tokenisation
+# Whole word / phrase matching
+# =========================================================
+
+def contains_phrase(text, phrase):
+    """
+    Match a complete word or phrase.
+
+    Example:
+    'program' matches 'program'
+    but does not match 'programming'.
+    """
+
+    pattern = (
+        r"\b"
+        + re.escape(phrase)
+        + r"\b"
+    )
+
+    return bool(
+        re.search(
+            pattern,
+            text
+        )
+    )
+
+
+# =========================================================
+# Tokenise text
 # =========================================================
 
 def tokenize(text):
     """
-    Convert text into useful lowercase words while
-    removing common stop words.
+    Convert text into useful lowercase words
+    while removing common stop words.
     """
 
     words = re.findall(
@@ -142,25 +173,30 @@ def tokenize(text):
 
 
 # =========================================================
-# Title-match score
+# Calculate title match
 # =========================================================
 
 def calculate_title_match(question, title):
     """
-    Compare important words from the user's question
-    against words in the record title.
-
-    Returns a value between 0 and 1.
+    Measure overlap between useful words in the
+    question and useful words in a record title.
     """
 
-    question_words = tokenize(question)
-    title_words = tokenize(title)
+    question_words = tokenize(
+        question
+    )
+
+    title_words = tokenize(
+        title
+    )
 
     if not question_words:
         return 0.0
 
-    matched_words = question_words.intersection(
-        title_words
+    matched_words = (
+        question_words.intersection(
+            title_words
+        )
     )
 
     return (
@@ -170,7 +206,7 @@ def calculate_title_match(question, title):
 
 
 # =========================================================
-# Convert record to standard result format
+# Standardise returned result
 # =========================================================
 
 def build_result(
@@ -181,8 +217,7 @@ def build_result(
     retrieval_mode="hybrid"
 ):
     """
-    Return all retrieved records using the same
-    structure regardless of retrieval method.
+    Build a standard result structure.
     """
 
     description = (
@@ -260,12 +295,12 @@ def build_result(
 
 
 # =========================================================
-# Get all records
+# Get all raw records
 # =========================================================
 
 def get_all_records():
     """
-    Extract raw records from metadata.json.
+    Extract original records from metadata.json.
     """
 
     return [
@@ -275,7 +310,413 @@ def get_all_records():
 
 
 # =========================================================
-# Programme-level helpers
+# Domain intent detection
+# =========================================================
+
+def is_uom_domain_question(question):
+    """
+    Determine whether a question appears to belong
+    to the UoM chatbot knowledge domain.
+    """
+
+    q = normalize_text(
+        question
+    )
+
+
+    # -----------------------------------------------------
+    # Strong institutional signals
+    # -----------------------------------------------------
+
+    institutional_signals = [
+        "uom",
+        "university of mauritius",
+        "foicdt"
+    ]
+
+    if any(
+        signal in q
+        for signal in institutional_signals
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Degree / programme terminology
+    # -----------------------------------------------------
+
+    degree_signals = [
+        "programme",
+        "programmes",
+        "program",
+        "programs",
+        "undergraduate",
+        "undergraduates",
+        "postgraduate",
+        "postgraduates",
+        "bachelor",
+        "bachelors",
+        "bachelor's",
+        "master",
+        "masters",
+        "master's",
+        "bsc",
+        "msc",
+        "degree",
+        "degrees"
+    ]
+
+    if any(
+        contains_phrase(
+            q,
+            signal
+        )
+        for signal in degree_signals
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Faculty / department signals
+    # -----------------------------------------------------
+
+    faculty_signals = [
+        "dean",
+        "department",
+        "departments",
+        "digital technologies",
+        "software and information systems",
+        "information and communication technology"
+    ]
+
+    if any(
+        signal in q
+        for signal in faculty_signals
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Admission / eligibility signals
+    # -----------------------------------------------------
+
+    admission_signals = [
+        "eligibility",
+        "eligible",
+        "admission",
+        "admissions",
+        "applicant",
+        "applicants"
+    ]
+
+    if any(
+        contains_phrase(
+            q,
+            signal
+        )
+        for signal in admission_signals
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Documents + application context
+    # -----------------------------------------------------
+
+    document_signal = any(
+        contains_phrase(
+            q,
+            signal
+        )
+        for signal in [
+            "document",
+            "documents",
+            "paperwork"
+        ]
+    )
+
+    application_signal = any(
+        contains_phrase(
+            q,
+            signal
+        )
+        for signal in [
+            "apply",
+            "applying",
+            "application"
+        ]
+    )
+
+    if (
+        document_signal
+        and application_signal
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Fee / payment signals
+    # -----------------------------------------------------
+
+    financial_signals = [
+        "fee",
+        "fees",
+        "payment",
+        "payments",
+        "pay",
+        "paying",
+        "settle",
+        "administrative charge",
+        "administrative charges",
+        "administrative fee",
+        "administrative fees"
+    ]
+
+    if any(
+        contains_phrase(
+            q,
+            signal
+        )
+        for signal in financial_signals
+    ):
+        return True
+
+
+    return False
+
+
+# =========================================================
+# Detect undergraduate request
+# =========================================================
+
+def detect_undergraduate_request(question):
+    """
+    Recognise different ways of referring to
+    undergraduate programmes.
+    """
+
+    q = normalize_text(
+        question
+    )
+
+    undergraduate_terms = [
+        "undergraduate",
+        "undergraduates",
+        "bachelor",
+        "bachelors",
+        "bachelor's",
+        "bsc"
+    ]
+
+    return any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in undergraduate_terms
+    )
+
+
+# =========================================================
+# Detect postgraduate request
+# =========================================================
+
+def detect_postgraduate_request(question):
+    """
+    Recognise different ways of referring to
+    postgraduate programmes.
+    """
+
+    q = normalize_text(
+        question
+    )
+
+    postgraduate_terms = [
+        "postgraduate",
+        "postgraduates",
+        "master",
+        "masters",
+        "master's",
+        "msc"
+    ]
+
+    return any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in postgraduate_terms
+    )
+
+
+# =========================================================
+# Detect list / group query
+# =========================================================
+
+def detect_list_intent(question):
+    """
+    Detect whether the user wants several records
+    rather than information about one specific programme.
+
+    Examples:
+
+    "Show me all bachelor's programmes."
+        -> True
+
+    "Which undergraduate programmes are three years?"
+        -> True
+
+    "Give me a description of the BSc Software
+    Engineering programme."
+        -> False
+    """
+
+    q = normalize_text(
+        question
+    )
+
+
+    # -----------------------------------------------------
+    # Detect specific named degree reference
+    # -----------------------------------------------------
+
+    specific_degree_reference = (
+        contains_phrase(
+            q,
+            "bsc"
+        )
+        or contains_phrase(
+            q,
+            "msc"
+        )
+    )
+
+
+    # -----------------------------------------------------
+    # Detect request for information about one programme
+    # -----------------------------------------------------
+
+    specific_information_signals = [
+        "description",
+        "describe",
+        "tell me about",
+        "information about",
+        "how long is",
+        "duration of"
+    ]
+
+    specific_information_request = any(
+        signal in q
+        for signal in specific_information_signals
+    )
+
+
+    # -----------------------------------------------------
+    # Explicit multi-record wording
+    # -----------------------------------------------------
+
+    explicit_group_signals = [
+        "show me all",
+        "list all",
+        "list the",
+        "all the",
+        "which programmes",
+        "which programs",
+        "which degrees",
+        "which courses"
+    ]
+
+    explicit_group_request = any(
+        signal in q
+        for signal in explicit_group_signals
+    )
+
+
+    # -----------------------------------------------------
+    # Specific BSc / MSc request should remain semantic
+    # unless the user explicitly asks for a group/list.
+    # -----------------------------------------------------
+
+    if (
+        specific_degree_reference
+        and specific_information_request
+        and not explicit_group_request
+    ):
+        return False
+
+
+    # -----------------------------------------------------
+    # Explicit list wording
+    # -----------------------------------------------------
+
+    explicit_list_signals = [
+        "show me all",
+        "list all",
+        "list the",
+        "all the",
+        "what are the",
+        "what are",
+        "which programmes",
+        "which programs",
+        "which degrees",
+        "which courses",
+        "different departments",
+        "each department"
+    ]
+
+    if any(
+        signal in q
+        for signal in explicit_list_signals
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Plural programme wording
+    # -----------------------------------------------------
+
+    plural_terms = [
+        "programmes",
+        "programs",
+        "degrees",
+        "courses",
+        "undergraduates",
+        "postgraduates"
+    ]
+
+    if any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in plural_terms
+    ):
+        return True
+
+
+    # -----------------------------------------------------
+    # Master's list wording
+    # -----------------------------------------------------
+
+    if (
+        contains_phrase(
+            q,
+            "masters"
+        )
+        and (
+            "available" in q
+            or "which" in q
+            or "what are" in q
+        )
+    ):
+        return True
+
+
+    return False
+
+
+# =========================================================
+# Identify undergraduate record
 # =========================================================
 
 def is_undergraduate_record(record):
@@ -285,18 +726,29 @@ def is_undergraduate_record(record):
     """
 
     record_id = normalize_text(
-        record.get("ID", "")
+        record.get(
+            "ID",
+            ""
+        )
     )
 
     subcategory = normalize_text(
-        record.get("Subcategory", "")
+        record.get(
+            "Subcategory",
+            ""
+        )
     )
 
     title = normalize_text(
-        record.get("Title", "")
+        record.get(
+            "Title",
+            ""
+        )
     )
 
-    if not record_id.startswith("prog_"):
+    if not record_id.startswith(
+        "prog_"
+    ):
         return False
 
     return (
@@ -305,6 +757,10 @@ def is_undergraduate_record(record):
     )
 
 
+# =========================================================
+# Identify postgraduate record
+# =========================================================
+
 def is_postgraduate_record(record):
     """
     Determine whether a record represents a
@@ -312,18 +768,29 @@ def is_postgraduate_record(record):
     """
 
     record_id = normalize_text(
-        record.get("ID", "")
+        record.get(
+            "ID",
+            ""
+        )
     )
 
     subcategory = normalize_text(
-        record.get("Subcategory", "")
+        record.get(
+            "Subcategory",
+            ""
+        )
     )
 
     title = normalize_text(
-        record.get("Title", "")
+        record.get(
+            "Title",
+            ""
+        )
     )
 
-    if not record_id.startswith("prog_"):
+    if not record_id.startswith(
+        "prog_"
+    ):
         return False
 
     return (
@@ -332,14 +799,21 @@ def is_postgraduate_record(record):
     )
 
 
+# =========================================================
+# Detect three-year programme
+# =========================================================
+
 def is_three_year_record(record):
     """
-    Check whether the programme duration represents
-    approximately 3 years.
+    Check whether a programme has a three-year
+    duration.
     """
 
     duration = normalize_text(
-        record.get("Duration", "")
+        record.get(
+            "Duration",
+            ""
+        )
     )
 
     return bool(
@@ -356,102 +830,50 @@ def is_three_year_record(record):
 
 def metadata_retrieve(question):
     """
-    Detect structured/list-style questions that are
-    better answered using metadata rather than only
-    vector similarity.
-
-    Returns:
-        list of matching results if metadata retrieval
-        should be used.
-
-        None if normal semantic retrieval should be used.
+    Handle structured and multi-answer queries.
     """
 
-    q = normalize_text(question)
+    q = normalize_text(
+        question
+    )
 
     records = get_all_records()
 
-    # -----------------------------------------------------
-    # Detect undergraduate / postgraduate concepts
-    # -----------------------------------------------------
 
     undergraduate_request = (
-        "undergraduate" in q
-        or "undergraduates" in q
+        detect_undergraduate_request(
+            question
+        )
     )
 
     postgraduate_request = (
-        "postgraduate" in q
-        or "postgraduates" in q
-        or bool(
-            re.search(
-                r"\bmasters?\b",
-                q
-            )
-        )
-        or bool(
-            re.search(
-                r"\bmaster's\b",
-                q
-            )
+        detect_postgraduate_request(
+            question
         )
     )
 
-    # -----------------------------------------------------
-    # Detect list/group intent
-    # -----------------------------------------------------
-
-    list_intent = any(
-        phrase in q
-        for phrase in [
-            "what are",
-            "which ",
-            "list",
-            "lists",
-            "available",
-            "all ",
-            "each "
-        ]
+    list_intent = detect_list_intent(
+        question
     )
 
-    # Questions such as:
-    # "How long are the postgraduate programmes?"
-    # are also group queries.
-    programme_group_request = (
-        (
-            undergraduate_request
-            or postgraduate_request
-        )
-        and (
-            "programme" in q
-            or "programmes" in q
-            or "program" in q
-            or "programs" in q
-        )
-    )
 
     # -----------------------------------------------------
     # Department list query
-    #
-    # Example:
-    # "What departments are under FOICDT and who heads
-    # each department?"
     # -----------------------------------------------------
 
     department_list_request = (
         (
             "departments" in q
-            or (
-                "department" in q
-                and (
-                    "each" in q
-                    or "all" in q
-                    or "list" in q
-                )
-            )
+            or "different departments" in q
+            or "each department" in q
         )
-        and "foicdt" in q
+        and (
+            "foicdt" in q
+            or "heads" in q
+            or "head" in q
+        )
     )
+
 
     if department_list_request:
 
@@ -460,20 +882,31 @@ def metadata_retrieve(question):
             for record in records
             if (
                 str(
-                    record.get("ID", "")
+                    record.get(
+                        "ID",
+                        ""
+                    )
                 ).startswith("FAC_")
-                and "department" in normalize_text(
-                    record.get("Title", "")
+                and
+                "department"
+                in normalize_text(
+                    record.get(
+                        "Title",
+                        ""
+                    )
                 )
             )
         ]
 
+
         department_records.sort(
-            key=lambda record: record.get(
+            key=lambda record:
+            record.get(
                 "ID",
                 ""
             )
         )
+
 
         return [
             build_result(
@@ -481,55 +914,60 @@ def metadata_retrieve(question):
                 score=1.0,
                 retrieval_mode="metadata"
             )
-            for record in department_records
+            for record
+            in department_records
         ]
 
+
     # -----------------------------------------------------
-    # Undergraduate programme list
+    # Undergraduate list / filter
     # -----------------------------------------------------
 
     if (
         undergraduate_request
-        and (
-            list_intent
-            or programme_group_request
-        )
+        and list_intent
     ):
 
         programme_records = [
             record
             for record in records
-            if is_undergraduate_record(record)
+            if is_undergraduate_record(
+                record
+            )
         ]
 
-        # ---------------------------------------------
-        # Optional duration filter
-        #
-        # Example:
-        # "Which undergraduate programmes are 3 years?"
-        # ---------------------------------------------
 
-        asks_for_three_years = bool(
-            re.search(
-                r"\b3\s*(year|years|yr|yrs)\b",
-                q
+        asks_for_three_years = (
+            bool(
+                re.search(
+                    r"\b3\s*(year|years|yr|yrs)\b",
+                    q
+                )
             )
+            or "three years" in q
+            or "three year" in q
         )
+
 
         if asks_for_three_years:
 
             programme_records = [
                 record
                 for record in programme_records
-                if is_three_year_record(record)
+                if is_three_year_record(
+                    record
+                )
             ]
 
+
         programme_records.sort(
-            key=lambda record: record.get(
+            key=lambda record:
+            record.get(
                 "ID",
                 ""
             )
         )
+
 
         return [
             build_result(
@@ -537,33 +975,37 @@ def metadata_retrieve(question):
                 score=1.0,
                 retrieval_mode="metadata"
             )
-            for record in programme_records
+            for record
+            in programme_records
         ]
 
+
     # -----------------------------------------------------
-    # Postgraduate programme list
+    # Postgraduate list
     # -----------------------------------------------------
 
     if (
         postgraduate_request
-        and (
-            list_intent
-            or programme_group_request
-        )
+        and list_intent
     ):
 
         programme_records = [
             record
             for record in records
-            if is_postgraduate_record(record)
+            if is_postgraduate_record(
+                record
+            )
         ]
 
+
         programme_records.sort(
-            key=lambda record: record.get(
+            key=lambda record:
+            record.get(
                 "ID",
                 ""
             )
         )
+
 
         return [
             build_result(
@@ -571,14 +1013,184 @@ def metadata_retrieve(question):
                 score=1.0,
                 retrieval_mode="metadata"
             )
-            for record in programme_records
+            for record
+            in programme_records
         ]
 
-    # -----------------------------------------------------
-    # No metadata rule matched
-    # -----------------------------------------------------
 
     return None
+
+
+# =========================================================
+# Intent-based reranking
+# =========================================================
+
+def calculate_intent_boost(
+    question,
+    record
+):
+    """
+    Apply small boosts for clearly identifiable
+    query intents.
+    """
+
+    q = normalize_text(
+        question
+    )
+
+    record_id = str(
+        record.get(
+            "ID",
+            ""
+        )
+    )
+
+
+    boost = 0.0
+
+
+    # -----------------------------------------------------
+    # Administrative fees
+    # -----------------------------------------------------
+
+    administrative_signal = (
+        "administrative" in q
+    )
+
+    fee_signal = any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in [
+            "fee",
+            "fees",
+            "charge",
+            "charges",
+            "cost",
+            "costs"
+        ]
+    )
+
+
+    if (
+        record_id == "ADM_003"
+        and administrative_signal
+        and fee_signal
+    ):
+        boost += 0.20
+
+
+    # -----------------------------------------------------
+    # Payment methods
+    # -----------------------------------------------------
+
+    payment_signal = any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in [
+            "payment",
+            "payments",
+            "pay",
+            "paying",
+            "settle",
+            "means"
+        ]
+    )
+
+
+    if (
+        record_id == "ADM_004"
+        and payment_signal
+    ):
+        boost += 0.12
+
+
+    # -----------------------------------------------------
+    # Required documents
+    # -----------------------------------------------------
+
+    document_signal = any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in [
+            "document",
+            "documents",
+            "paperwork"
+        ]
+    )
+
+
+    if (
+        record_id == "ADM_001"
+        and document_signal
+    ):
+        boost += 0.12
+
+
+    # -----------------------------------------------------
+    # Eligibility
+    # -----------------------------------------------------
+
+    eligibility_signal = any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in [
+            "eligible",
+            "eligibility",
+            "qualifications",
+            "qualify"
+        ]
+    )
+
+
+    if (
+        record_id == "ADM_002"
+        and eligibility_signal
+    ):
+        boost += 0.12
+
+
+    # -----------------------------------------------------
+    # Cybersecurity programme intent
+    # -----------------------------------------------------
+
+    cybersecurity_signal = any(
+        contains_phrase(
+            q,
+            term
+        )
+        for term in [
+            "cybersecurity",
+            "cyber security",
+            "security",
+            "protect",
+            "protecting",
+            "hackers",
+            "malware",
+            "cyber attack",
+            "cyber attacks"
+        ]
+    )
+
+
+    if (
+        record_id in [
+            "PROG_006",
+            "PROG_007"
+        ]
+        and cybersecurity_signal
+    ):
+        boost += 0.08
+
+
+    return boost
 
 
 # =========================================================
@@ -591,44 +1203,57 @@ def retrieve(
     min_semantic_score=DEFAULT_MIN_SEMANTIC_SCORE
 ):
     """
-    Hybrid retrieval system.
+    Main hybrid retrieval function.
 
-    Retrieval modes:
-
-    1. Metadata retrieval
-       Used for list/filter questions.
-
-    2. FAISS semantic retrieval + title reranking
-       Used for specific semantic questions.
-
-    3. Off-topic rejection
-       Weak semantic matches below the relevance
-       threshold are removed.
+    Stages:
+    1. Validate question
+    2. Check UoM domain intent
+    3. Try metadata retrieval
+    4. Use FAISS semantic search
+    5. Apply title and intent reranking
+    6. Reject weak semantic matches
     """
 
     # -----------------------------------------------------
     # Validate question
     # -----------------------------------------------------
 
-    if not question or not question.strip():
+    if not question:
         return []
 
+
+    question = question.strip()
+
+
+    if not question:
+        return []
+
+
     # -----------------------------------------------------
-    # STEP 1:
-    # Try metadata-aware retrieval first
+    # Domain intent check
+    # -----------------------------------------------------
+
+    if not is_uom_domain_question(
+        question
+    ):
+        return []
+
+
+    # -----------------------------------------------------
+    # Metadata retrieval
     # -----------------------------------------------------
 
     metadata_results = metadata_retrieve(
         question
     )
 
-    if metadata_results is not None:
 
+    if metadata_results is not None:
         return metadata_results
 
+
     # -----------------------------------------------------
-    # STEP 2:
-    # Semantic retrieval using FAISS
+    # Encode question
     # -----------------------------------------------------
 
     question_embedding = model.encode(
@@ -637,24 +1262,38 @@ def retrieve(
         convert_to_numpy=True
     )
 
+
+    # -----------------------------------------------------
+    # Candidate retrieval
+    # -----------------------------------------------------
+
     candidate_k = min(
-        max(top_k * 2, 5),
+        max(
+            top_k * 2,
+            5
+        ),
         index.ntotal
     )
 
-    semantic_scores, indices = index.search(
-        question_embedding,
-        candidate_k
+
+    semantic_scores, indices = (
+        index.search(
+            question_embedding,
+            candidate_k
+        )
     )
 
+
     results = []
+
 
     normalized_question = normalize_text(
         question
     )
 
+
     # -----------------------------------------------------
-    # Does the user explicitly mention Top Up?
+    # Detect explicit Top-Up wording
     # -----------------------------------------------------
 
     question_mentions_top_up = bool(
@@ -664,11 +1303,15 @@ def retrieve(
         )
     )
 
+
     # -----------------------------------------------------
-    # Process semantic candidates
+    # Process candidates
     # -----------------------------------------------------
 
-    for semantic_score, index_position in zip(
+    for (
+        semantic_score,
+        index_position
+    ) in zip(
         semantic_scores[0],
         indices[0]
     ):
@@ -676,20 +1319,31 @@ def retrieve(
         if index_position == -1:
             continue
 
+
         semantic_score = float(
             semantic_score
         )
 
+
         # -------------------------------------------------
-        # Off-topic / relevance threshold
+        # Semantic relevance threshold
         # -------------------------------------------------
 
-        if semantic_score < min_semantic_score:
+        if (
+            semantic_score
+            < min_semantic_score
+        ):
             continue
 
-        item = metadata[index_position]
 
-        record = item["record"]
+        item = metadata[
+            index_position
+        ]
+
+        record = item[
+            "record"
+        ]
+
 
         title = record.get(
             "Title",
@@ -700,8 +1354,9 @@ def retrieve(
             title
         )
 
+
         # -------------------------------------------------
-        # Calculate title match
+        # Title score
         # -------------------------------------------------
 
         title_match = calculate_title_match(
@@ -709,23 +1364,33 @@ def retrieve(
             title
         )
 
+
         # -------------------------------------------------
-        # Base hybrid score
+        # Intent score
+        # -------------------------------------------------
+
+        intent_boost = calculate_intent_boost(
+            question,
+            record
+        )
+
+
+        # -------------------------------------------------
+        # Final hybrid score
         # -------------------------------------------------
 
         final_score = (
             semantic_score
-            + (0.25 * title_match)
+            + (
+                0.25
+                * title_match
+            )
+            + intent_boost
         )
+
 
         # -------------------------------------------------
         # Top-Up disambiguation
-        #
-        # If user asks simply for BSc Cybersecurity,
-        # slightly prefer the standard programme.
-        #
-        # If user explicitly asks for Top Up,
-        # slightly boost the Top Up record.
         # -------------------------------------------------
 
         title_is_top_up = bool(
@@ -734,6 +1399,7 @@ def retrieve(
                 normalized_title
             )
         )
+
 
         if title_is_top_up:
 
@@ -744,6 +1410,7 @@ def retrieve(
             else:
 
                 final_score -= 0.08
+
 
         # -------------------------------------------------
         # Build result
@@ -757,18 +1424,30 @@ def retrieve(
             retrieval_mode="hybrid"
         )
 
-        results.append(result)
+
+        results.append(
+            result
+        )
+
 
     # -----------------------------------------------------
     # Sort by final score
     # -----------------------------------------------------
 
     results.sort(
-        key=lambda result: result["score"],
+        key=lambda result:
+        result["score"],
         reverse=True
     )
 
-    return results[:top_k]
+
+    # -----------------------------------------------------
+    # Return final results
+    # -----------------------------------------------------
+
+    return results[
+        :top_k
+    ]
 
 
 # =========================================================
@@ -778,31 +1457,83 @@ def retrieve(
 if __name__ == "__main__":
 
     test_questions = [
-        "How long is the BSc Cybersecurity programme?",
-        "What is the Cybersecurity Top Up programme?",
-        "What undergraduate programmes are available under FOICDT?",
-        "Which undergraduate programmes are 3 years?",
-        "What Masters are available at UoM in the IT sector?",
-        "How long are the postgraduate programmes under FOICDT?",
-        "What departments are present under FOICDT and who heads each one?",
-        "Who is the Dean of FOICDT?",
-        "What is the weather tomorrow?"
+
+        (
+            "Can I have a description about the "
+            "BSc (Hons) Software Engineering programmes?"
+        ),
+
+        (
+            "I want to study a degree focused on "
+            "protecting computer systems and networks. "
+            "What undergraduate programme does FOICDT offer?"
+        ),
+
+        (
+            "Show me all the bachelor's programmes "
+            "offered by FOICDT."
+        ),
+
+        (
+            "Which FOICDT bachelor's degrees take "
+            "three years to complete?"
+        ),
+
+        (
+            "Which Master's programmes can I study "
+            "under FOICDT?"
+        ),
+
+        (
+            "I would like information about the yearly "
+            "administrative charges for Mauritian students."
+        ),
+
+        (
+            "How can I protect my personal laptop "
+            "from malware and hackers?"
+        ),
+
+        (
+            "Can you explain what artificial "
+            "intelligence is?"
+        ),
+
+        (
+            "What programming language should a "
+            "beginner learn first?"
+        ),
+
+        (
+            "How do I apply for a passport in Mauritius?"
+        )
     ]
+
 
     for question in test_questions:
 
-        print("\n" + "=" * 75)
+        print(
+            "\n"
+            + "=" * 75
+        )
+
 
         print(
             f"QUESTION: {question}"
         )
+
 
         results = retrieve(
             question,
             top_k=3
         )
 
+
         if not results:
+
+            print(
+                "RETRIEVAL MODE: NONE"
+            )
 
             print(
                 "No relevant UoM information found."
@@ -810,10 +1541,12 @@ if __name__ == "__main__":
 
             continue
 
+
         print(
-            f"RETRIEVAL MODE: "
+            "RETRIEVAL MODE: "
             f"{results[0]['retrieval_mode']}"
         )
+
 
         for number, result in enumerate(
             results,
