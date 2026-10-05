@@ -1,0 +1,38 @@
+Student Services Dataset 
+
+1. Library Opening Hours
+
+Term Time:
+Weekdays: 08:00 a.m. – 17:00 p.m.[3]
+Saturdays: 08:00 a.m. – 13:00 p.m.[3]
+Vacation Period:
+Weekdays: 08:00 a.m. – 16:00 p.m.[4]
+Saturdays: 08:00 a.m. – 12:00 p.m. (Noon)[4]
+
+2\. Library Membership and Borrowing Limits
+
+All borrowers must present a valid UoM Student/Staff ID card to borrow books[5]:
+
+Academic Staff: 6 books (including 2 from the Reserve Section)[5].
+MPhil / PhD Students: 5 books (including 1 from the Reserve Section)[5]
+Undergraduate and Law Students: 3 books (including 1 from the Reserve Section)[5].
+Non-Academic Staff: 1 book[5].
+Official Regulations URL: `https://www.uom.ac.mu/index.php/library/library-regulations/membership`[5].
+
+3. Location of Computer Labs
+
+CITS Lab: Ex-Student Common Room, First Floor, VCILT Building[6].
+CITS Lab 1A, 1B, and 1C: Phase II Engineering Building[6].
+CITS FSSH Lab: Ground Floor, FSSH Building[6].
+CITS FOA Lab 1A: First Floor, FOA Building[6].
+CITS FOA Lab 2A: Second Floor, FOA Building[6].
+CITS ETB Lab and Bioinformatics Lab: First Floor, Prof E. Lim Fat Building[6].
+CITS Ebene Core Lab: 2nd Floor, The Core Building, Ebene[6].
+
+4. Payment Facilities and Financial Methods
+
+Credit / Debit Card Online: Via the "Pay Online" portal in USD or MUR (`https://apply.uom.ac.mu/UOMonlinePay/uomonlinepay.aspx`)[7].
+MCB Bank Transfer: Account No. `000142555444` via MCB Internet Banking (`www.mcb.mu`) or MCB JUICE[7].
+SBM Bank Transfer (MUR): Account No. `62025100002399` via SBM Internet Banking (`www.sbmgroup.mu`)[7].
+SBM Bank Transfer (USD): Account No. `61026000014607`[8].
+Mobile Applications: my.t Billpay via my.t money app, and BLINK app[8].
