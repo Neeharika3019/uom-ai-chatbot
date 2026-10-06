@@ -1,16 +1,28 @@
 import json
 import re
+from pathlib import Path
 
 import faiss
 from sentence_transformers import SentenceTransformer
 
 
 # =========================================================
-# Configuration
+# Project configuration
 # =========================================================
 
-INDEX_FILE = "vector_db/uom_index.faiss"
-METADATA_FILE = "vector_db/metadata.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+INDEX_FILE = (
+    PROJECT_ROOT
+    / "vector_db"
+    / "uom_index.faiss"
+)
+
+METADATA_FILE = (
+    PROJECT_ROOT
+    / "vector_db"
+    / "metadata.json"
+)
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 
@@ -23,7 +35,9 @@ DEFAULT_MIN_SEMANTIC_SCORE = 0.20
 
 print("Loading embedding model...")
 
-model = SentenceTransformer(MODEL_NAME)
+model = SentenceTransformer(
+    MODEL_NAME
+)
 
 
 # =========================================================
@@ -32,7 +46,9 @@ model = SentenceTransformer(MODEL_NAME)
 
 print("Loading FAISS index...")
 
-index = faiss.read_index(INDEX_FILE)
+index = faiss.read_index(
+    str(INDEX_FILE)
+)
 
 
 # =========================================================
@@ -44,11 +60,12 @@ with open(
     "r",
     encoding="utf-8"
 ) as file:
+
     metadata = json.load(file)
 
 
 # =========================================================
-# Stop words for title matching
+# Stop words used for title matching
 # =========================================================
 
 STOP_WORDS = {
@@ -81,6 +98,7 @@ STOP_WORDS = {
     "should",
     "uom",
     "university",
+    "mauritius",
     "offer",
     "offers",
     "offered",
@@ -98,19 +116,22 @@ STOP_WORDS = {
 
 
 # =========================================================
-# Normalise text
+# Text normalisation
 # =========================================================
 
 def normalize_text(text):
-    """
-    Convert text to lowercase and simplify spaces
-    and punctuation for easier rule matching.
-    """
 
     text = str(text).lower()
 
-    text = text.replace("-", " ")
-    text = text.replace("’", "'")
+    text = text.replace(
+        "-",
+        " "
+    )
+
+    text = text.replace(
+        "’",
+        "'"
+    )
 
     text = re.sub(
         r"\s+",
@@ -122,17 +143,13 @@ def normalize_text(text):
 
 
 # =========================================================
-# Whole word / phrase matching
+# Whole-word / phrase matching
 # =========================================================
 
-def contains_phrase(text, phrase):
-    """
-    Match a complete word or phrase.
-
-    Example:
-    'program' matches 'program'
-    but does not match 'programming'.
-    """
+def contains_phrase(
+    text,
+    phrase
+):
 
     pattern = (
         r"\b"
@@ -148,39 +165,46 @@ def contains_phrase(text, phrase):
     )
 
 
+def contains_any_phrase(
+    text,
+    phrases
+):
+
+    return any(
+        contains_phrase(
+            text,
+            phrase
+        )
+        for phrase in phrases
+    )
+
+
 # =========================================================
-# Tokenise text
+# Tokenisation
 # =========================================================
 
 def tokenize(text):
-    """
-    Convert text into useful lowercase words
-    while removing common stop words.
-    """
 
     words = re.findall(
         r"\b[a-zA-Z]+\b",
         str(text).lower()
     )
 
-    useful_words = {
+    return {
         word
         for word in words
         if word not in STOP_WORDS
     }
 
-    return useful_words
-
 
 # =========================================================
-# Calculate title match
+# Title matching
 # =========================================================
 
-def calculate_title_match(question, title):
-    """
-    Measure overlap between useful words in the
-    question and useful words in a record title.
-    """
+def calculate_title_match(
+    question,
+    title
+):
 
     question_words = tokenize(
         question
@@ -191,13 +215,16 @@ def calculate_title_match(question, title):
     )
 
     if not question_words:
+
         return 0.0
+
 
     matched_words = (
         question_words.intersection(
             title_words
         )
     )
+
 
     return (
         len(matched_words)
@@ -206,7 +233,7 @@ def calculate_title_match(question, title):
 
 
 # =========================================================
-# Standardise returned result
+# Standard result structure
 # =========================================================
 
 def build_result(
@@ -216,16 +243,21 @@ def build_result(
     title_match=0.0,
     retrieval_mode="hybrid"
 ):
-    """
-    Build a standard result structure.
-    """
 
     description = (
-        record.get("Programme Description")
-        or record.get("Description", "")
+        record.get(
+            "Programme Description"
+        )
+        or
+        record.get(
+            "Description",
+            ""
+        )
     )
 
+
     return {
+
         "id": record.get(
             "ID",
             ""
@@ -278,6 +310,11 @@ def build_result(
             ""
         ),
 
+        "source_file": record.get(
+            "Source File",
+            ""
+        ),
+
         "semantic_score": float(
             semantic_score
         ),
@@ -295,13 +332,10 @@ def build_result(
 
 
 # =========================================================
-# Get all raw records
+# Get all records
 # =========================================================
 
 def get_all_records():
-    """
-    Extract original records from metadata.json.
-    """
 
     return [
         item["record"]
@@ -310,175 +344,796 @@ def get_all_records():
 
 
 # =========================================================
-# Domain intent detection
+# Domain detection
 # =========================================================
 
 def is_uom_domain_question(question):
-    """
-    Determine whether a question appears to belong
-    to the UoM chatbot knowledge domain.
-    """
 
     q = normalize_text(
         question
     )
 
 
-    # -----------------------------------------------------
-    # Strong institutional signals
-    # -----------------------------------------------------
+    # =====================================================
+    # Strong external / unsupported topic exclusions
+    # =====================================================
 
-    institutional_signals = [
-        "uom",
-        "university of mauritius",
-        "foicdt"
+    external_signals = [
+
+        "passport",
+
+        "driving licence",
+        "driver's licence",
+        "drivers licence",
+
+        "electricity bill",
+        "water bill",
+
+        "weather tomorrow",
+
+        "fifa world cup",
+
+        "chocolate cake",
+
+        "graphics card",
+        "gaming pc",
+
+        "repair my laptop",
+
+        "programming language should",
+
+        "two factor authentication",
+
+        "prime minister"
     ]
+
 
     if any(
         signal in q
-        for signal in institutional_signals
+        for signal in external_signals
     ):
-        return True
+
+        return False
 
 
-    # -----------------------------------------------------
-    # Degree / programme terminology
-    # -----------------------------------------------------
+    # =====================================================
+    # External university detection
+    # =====================================================
+
+    external_university_pattern = re.search(
+        (
+            r"\b(?:at|from)\s+"
+            r"(?!uom\b)"
+            r"(?!university\s+of\s+mauritius\b)"
+            r"[a-z0-9&.'\s-]+?\s+university\b"
+        ),
+        q
+    )
+
+
+    if external_university_pattern:
+
+        return False
+
+
+    # =====================================================
+    # Non-UoM bill payment
+    # =====================================================
+
+    if (
+        contains_phrase(
+            q,
+            "bill"
+        )
+        and
+        not any(
+            signal in q
+            for signal in [
+                "uom",
+                "university of mauritius",
+                "fee",
+                "fees"
+            ]
+        )
+    ):
+
+        return False
+
+
+    # =====================================================
+    # Unsupported accommodation + flights case
+    # =====================================================
+
+    if (
+        (
+            "accommodation" in q
+            and
+            contains_any_phrase(
+                q,
+                [
+                    "flight",
+                    "flights"
+                ]
+            )
+        )
+        or
+        contains_any_phrase(
+            q,
+            [
+                "free accommodation",
+                "free flights"
+            ]
+        )
+    ):
+
+        return False
+
+
+    # =====================================================
+    # Institutional context
+    # =====================================================
+
+    institutional_signal = any(
+        signal in q
+        for signal in [
+            "uom",
+            "university of mauritius",
+            "foicdt"
+        ]
+    )
+
+
+    # =====================================================
+    # Programme / degree terminology
+    # =====================================================
 
     degree_signals = [
+
         "programme",
         "programmes",
+
         "program",
         "programs",
+
         "undergraduate",
         "undergraduates",
+
         "postgraduate",
         "postgraduates",
+
         "bachelor",
         "bachelors",
         "bachelor's",
+
         "master",
         "masters",
         "master's",
+
         "bsc",
         "msc",
+
         "degree",
         "degrees"
     ]
 
-    if any(
-        contains_phrase(
-            q,
-            signal
-        )
-        for signal in degree_signals
+
+    if contains_any_phrase(
+        q,
+        degree_signals
     ):
+
         return True
 
 
-    # -----------------------------------------------------
-    # Faculty / department signals
-    # -----------------------------------------------------
+    # =====================================================
+    # Specific programme subjects
+    # =====================================================
+
+    programme_subject_signals = [
+
+        "animation",
+        "visual effects",
+
+        "applied computing",
+
+        "computer science",
+
+        "information system",
+
+        "software engineering",
+
+        "cybersecurity",
+        "cyber security",
+
+        "artificial intelligence",
+
+        "software project management"
+    ]
+
+
+    subject_signal = contains_any_phrase(
+        q,
+        programme_subject_signals
+    )
+
+
+    education_intent = contains_any_phrase(
+        q,
+        [
+            "study",
+            "studying",
+
+            "offer",
+            "offers",
+            "offered",
+
+            "course",
+            "courses",
+
+            "programme",
+            "programmes",
+
+            "degree",
+            "degrees"
+        ]
+    )
+
+
+    if (
+        subject_signal
+        and
+        institutional_signal
+        and
+        education_intent
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Faculty / department knowledge
+    # =====================================================
+
+    faculty_word_signal = contains_any_phrase(
+        q,
+        [
+            "faculty",
+            "faculties"
+        ]
+    )
+
+
+    if (
+        faculty_word_signal
+        and
+        (
+            subject_signal
+            or
+            education_intent
+            or
+            institutional_signal
+            or
+            contains_any_phrase(
+                q,
+                [
+                    "department",
+                    "departments",
+
+                    "faculty of agriculture",
+                    "faculty of engineering",
+                    "faculty of law",
+                    "faculty of medicine",
+                    "faculty of science",
+                    "faculty of social sciences"
+                ]
+            )
+        )
+    ):
+
+        return True
+
 
     faculty_signals = [
+
         "dean",
+
         "department",
         "departments",
+
         "digital technologies",
+
         "software and information systems",
+
         "information and communication technology"
     ]
+
 
     if any(
         signal in q
         for signal in faculty_signals
     ):
+
         return True
 
 
-    # -----------------------------------------------------
-    # Admission / eligibility signals
-    # -----------------------------------------------------
+    # =====================================================
+    # Admissions / eligibility
+    # =====================================================
 
     admission_signals = [
+
         "eligibility",
         "eligible",
+
         "admission",
         "admissions",
+
         "applicant",
         "applicants"
     ]
 
-    if any(
-        contains_phrase(
-            q,
-            signal
-        )
-        for signal in admission_signals
+
+    if contains_any_phrase(
+        q,
+        admission_signals
     ):
+
         return True
 
 
-    # -----------------------------------------------------
-    # Documents + application context
-    # -----------------------------------------------------
+    # =====================================================
+    # Application documents
+    # =====================================================
 
-    document_signal = any(
-        contains_phrase(
-            q,
-            signal
-        )
-        for signal in [
+    document_signal = contains_any_phrase(
+        q,
+        [
             "document",
             "documents",
             "paperwork"
         ]
     )
 
-    application_signal = any(
-        contains_phrase(
-            q,
-            signal
-        )
-        for signal in [
+
+    application_signal = contains_any_phrase(
+        q,
+        [
             "apply",
             "applying",
             "application"
         ]
     )
 
+
     if (
         document_signal
-        and application_signal
+        and
+        application_signal
     ):
+
         return True
 
 
-    # -----------------------------------------------------
-    # Fee / payment signals
-    # -----------------------------------------------------
+    # =====================================================
+    # Academic calendar / examinations
+    # =====================================================
 
-    financial_signals = [
-        "fee",
-        "fees",
-        "payment",
-        "payments",
-        "pay",
-        "paying",
-        "settle",
-        "administrative charge",
-        "administrative charges",
-        "administrative fee",
-        "administrative fees"
+    academic_signals = [
+
+        "semester",
+        "semester 1",
+        "semester 2",
+
+        "examination",
+        "examinations",
+
+        "exam",
+        "exams",
+
+        "lecture",
+        "lectures",
+
+        "module registration",
+
+        "floating week",
+
+        "revision week",
+        "revision weeks",
+
+        "students week",
+        "students' week",
+
+        "graduation",
+        "graduation ceremony",
+        "graduation ceremonies",
+
+        "induction",
+
+        "late registration",
+
+        "de registration",
+        "deregistration"
     ]
 
-    if any(
-        contains_phrase(
-            q,
-            signal
-        )
-        for signal in financial_signals
+
+    if contains_any_phrase(
+        q,
+        academic_signals
     ):
+
+        return True
+
+
+    # =====================================================
+    # Student services
+    # =====================================================
+
+    service_signals = [
+
+        "library",
+
+        "borrow",
+        "borrowing",
+
+        "cits",
+
+        "computer lab",
+        "computer labs",
+
+        "lab 1a",
+        "lab 1b",
+        "lab 1c",
+
+        "vcilt",
+
+        "mcb",
+        "mcb juice",
+
+        "sbm",
+
+        "my.t",
+
+        "blink"
+    ]
+
+
+    if contains_any_phrase(
+        q,
+        service_signals
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Fees
+    # =====================================================
+
+    fee_signals = [
+
+        "fee",
+        "fees",
+
+        "administrative fee",
+        "administrative fees",
+
+        "administrative charge",
+        "administrative charges"
+    ]
+
+
+    if contains_any_phrase(
+        q,
+        fee_signals
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Payments
+    # =====================================================
+
+    payment_signals = [
+
+        "payment",
+        "payments",
+
+        "pay",
+        "paying",
+
+        "settle"
+    ]
+
+
+    if contains_any_phrase(
+        q,
+        payment_signals
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Member 3 contact information
+    # =====================================================
+
+    contact_signal = contains_any_phrase(
+        q,
+        [
+            "contact",
+            "telephone",
+            "phone",
+            "email",
+            "address",
+            "located"
+        ]
+    )
+
+
+    if (
+        contact_signal
+        and
+        (
+            institutional_signal
+            or
+            contains_any_phrase(
+                q,
+                [
+                    "admissions and student records office",
+                    "asro",
+
+                    "examinations office",
+                    "examination office",
+
+                    "international affairs office",
+
+                    "student welfare office"
+                ]
+            )
+        )
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Member 3 regulations
+    # =====================================================
+
+    member3_regulation_signals = [
+
+        "plagiarism",
+
+        "academic integrity",
+
+        "fabrication",
+        "falsification",
+
+        "turnitin",
+
+        "resit",
+        "resits",
+
+        "retake",
+        "retakes",
+
+        "special retake",
+
+        "final year project",
+        "final year projects",
+
+        "dissertation",
+        "dissertations",
+
+        "financial assistance",
+
+        "student welfare",
+
+        "scholarship",
+        "scholarships",
+
+        "student discipline",
+        "disciplinary",
+
+        "university rules",
+
+        "attendance",
+
+        "medical certificate",
+
+        "unauthorised device",
+        "unauthorized device",
+
+        "regulation",
+        "regulations",
+
+        "withdraw from uom",
+        "withdraw from the university"
+    ]
+
+
+    if contains_any_phrase(
+        q,
+        member3_regulation_signals
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Member 3 assessment / credits / progression
+    # =====================================================
+
+    member3_academic_signals = [
+
+        "continuous assessment",
+
+        "gpa",
+        "cpa",
+
+        "grade n",
+
+        "prerequisite",
+        "pre requisite",
+        "pre requirement",
+
+        "credit system",
+        "uom credits",
+
+        "ncvts",
+
+        "core module",
+        "elective module",
+        "audit module",
+
+        "programme structure",
+        "program structure",
+
+        "repeat a year",
+        "repeating a year",
+
+        "termination of registration",
+
+        "script review",
+        "review of examination script",
+
+        "academic dress"
+    ]
+
+
+    if contains_any_phrase(
+        q,
+        member3_academic_signals
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Member 3 student support
+    # =====================================================
+
+    member3_support_signals = [
+
+        "student union",
+        "students' union",
+        "students union",
+
+        "first aid",
+
+        "student counselling",
+        "student counseling",
+
+        "student welfare",
+
+        "financial assistance",
+
+        "student support",
+
+        "international affairs office",
+
+        "students with disabilities",
+        "student disability",
+
+        "student facilities"
+    ]
+
+
+    if contains_any_phrase(
+        q,
+        member3_support_signals
+    ):
+
+        return True
+
+
+    # =====================================================
+    # International student support topics
+    # =====================================================
+
+    if (
+        (
+            institutional_signal
+            or
+            contains_any_phrase(
+                q,
+                [
+                    "international student",
+                    "international students"
+                ]
+            )
+        )
+        and
+        contains_any_phrase(
+            q,
+            [
+                "accommodation",
+                "visa",
+                "residence permit",
+                "medical insurance",
+
+                "sports",
+                "sports facilities",
+
+                "counselling",
+                "counseling"
+            ]
+        )
+    ):
+
+        return True
+
+
+    # =====================================================
+    # Academic AI usage
+    #
+    # Generic AI questions remain unsupported.
+    # =====================================================
+
+    ai_signal = contains_any_phrase(
+        q,
+        [
+            "artificial intelligence",
+            "ai"
+        ]
+    )
+
+
+    ai_academic_use_signal = contains_any_phrase(
+        q,
+        [
+            "university work",
+            "academic work",
+
+            "assignment",
+            "assignments",
+
+            "project",
+            "projects",
+
+            "dissertation",
+            "dissertations",
+
+            "cite ai",
+            "citing ai",
+
+            "acknowledge ai",
+
+            "ai use",
+            "use ai",
+
+            "use artificial intelligence"
+        ]
+    )
+
+
+    if (
+        ai_signal
+        and
+        ai_academic_use_signal
+    ):
+
         return True
 
 
@@ -486,127 +1141,104 @@ def is_uom_domain_question(question):
 
 
 # =========================================================
-# Detect undergraduate request
+# Undergraduate detection
 # =========================================================
 
 def detect_undergraduate_request(question):
-    """
-    Recognise different ways of referring to
-    undergraduate programmes.
-    """
 
     q = normalize_text(
         question
     )
 
+
     undergraduate_terms = [
+
         "undergraduate",
         "undergraduates",
+
         "bachelor",
         "bachelors",
         "bachelor's",
+
         "bsc"
     ]
 
-    return any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in undergraduate_terms
+
+    return contains_any_phrase(
+        q,
+        undergraduate_terms
     )
 
 
 # =========================================================
-# Detect postgraduate request
+# Postgraduate detection
 # =========================================================
 
 def detect_postgraduate_request(question):
-    """
-    Recognise different ways of referring to
-    postgraduate programmes.
-    """
 
     q = normalize_text(
         question
     )
 
+
     postgraduate_terms = [
+
         "postgraduate",
         "postgraduates",
+
         "master",
         "masters",
         "master's",
+
         "msc"
     ]
 
-    return any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in postgraduate_terms
+
+    return contains_any_phrase(
+        q,
+        postgraduate_terms
     )
 
 
 # =========================================================
-# Detect list / group query
+# List intent detection
 # =========================================================
 
 def detect_list_intent(question):
-    """
-    Detect whether the user wants several records
-    rather than information about one specific programme.
-
-    Examples:
-
-    "Show me all bachelor's programmes."
-        -> True
-
-    "List every undergraduate degree."
-        -> True
-
-    "Which undergraduate programmes are three years?"
-        -> True
-
-    "Give me a description of the BSc Software
-    Engineering programme."
-        -> False
-    """
 
     q = normalize_text(
         question
     )
 
-
-    # -----------------------------------------------------
-    # Detect specific named degree reference
-    # -----------------------------------------------------
 
     specific_degree_reference = (
         contains_phrase(
             q,
             "bsc"
         )
-        or contains_phrase(
+        or
+        contains_phrase(
             q,
             "msc"
         )
     )
 
 
-    # -----------------------------------------------------
-    # Detect request for information about one programme
-    # -----------------------------------------------------
-
     specific_information_signals = [
+
         "description",
+
         "describe",
+
         "tell me about",
+
         "information about",
+
         "how long is",
+
         "duration of"
     ]
+
 
     specific_information_request = any(
         signal in q
@@ -614,21 +1246,31 @@ def detect_list_intent(question):
     )
 
 
-    # -----------------------------------------------------
-    # Explicit multi-record wording
-    # -----------------------------------------------------
-
     explicit_group_signals = [
+
         "show me all",
+
+        "show all",
+
         "list all",
+
         "list the",
+
         "list every",
+
+        "full set",
+
         "all the",
+
         "which programmes",
+
         "which programs",
+
         "which degrees",
+
         "which courses"
     ]
+
 
     explicit_group_request = any(
         signal in q
@@ -636,58 +1278,68 @@ def detect_list_intent(question):
     )
 
 
-    # -----------------------------------------------------
-    # Specific BSc / MSc request should remain hybrid
-    # unless the user explicitly asks for a group/list.
-    # -----------------------------------------------------
-
     if (
         specific_degree_reference
-        and specific_information_request
-        and not explicit_group_request
+        and
+        specific_information_request
+        and
+        not explicit_group_request
     ):
+
         return False
 
 
-    # -----------------------------------------------------
-    # Explicit list wording
-    # -----------------------------------------------------
-
     explicit_list_signals = [
+
         "show me all",
+
+        "show all",
+
         "list all",
+
         "list the",
+
         "list every",
+
+        "full set",
+
         "all the",
+
         "what are the",
+
         "what are",
+
         "which programmes",
+
         "which programs",
+
         "which degrees",
+
         "which courses",
+
         "different departments",
+
         "each department",
+
         "every undergraduate",
+
         "every postgraduate",
+
         "every degree",
+
         "every programme",
+
         "every program"
     ]
+
 
     if any(
         signal in q
         for signal in explicit_list_signals
     ):
+
         return True
 
-
-    # -----------------------------------------------------
-    # General "every" wording
-    #
-    # Examples:
-    # "every undergraduate degree"
-    # "every postgraduate programme"
-    # -----------------------------------------------------
 
     if contains_phrase(
         q,
@@ -698,75 +1350,68 @@ def detect_list_intent(question):
             detect_undergraduate_request(
                 question
             )
-            or detect_postgraduate_request(
+            or
+            detect_postgraduate_request(
                 question
             )
-            or contains_phrase(
+            or
+            contains_any_phrase(
                 q,
-                "degree"
-            )
-            or contains_phrase(
-                q,
-                "degrees"
-            )
-            or contains_phrase(
-                q,
-                "programme"
-            )
-            or contains_phrase(
-                q,
-                "programmes"
-            )
-            or contains_phrase(
-                q,
-                "program"
-            )
-            or contains_phrase(
-                q,
-                "programs"
+                [
+                    "degree",
+                    "degrees",
+
+                    "programme",
+                    "programmes",
+
+                    "program",
+                    "programs"
+                ]
             )
         ):
+
             return True
 
 
-    # -----------------------------------------------------
-    # Plural programme wording
-    # -----------------------------------------------------
-
     plural_terms = [
+
         "programmes",
+
         "programs",
+
         "degrees",
+
         "courses",
+
         "undergraduates",
+
         "postgraduates"
     ]
 
-    if any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in plural_terms
+
+    if contains_any_phrase(
+        q,
+        plural_terms
     ):
+
         return True
 
-
-    # -----------------------------------------------------
-    # Master's list wording
-    # -----------------------------------------------------
 
     if (
         contains_phrase(
             q,
             "masters"
         )
-        and (
+        and
+        (
             "available" in q
-            or "which" in q
-            or "what are" in q
+            or
+            "which" in q
+            or
+            "what are" in q
         )
     ):
+
         return True
 
 
@@ -774,14 +1419,10 @@ def detect_list_intent(question):
 
 
 # =========================================================
-# Identify undergraduate record
+# Record classification
 # =========================================================
 
 def is_undergraduate_record(record):
-    """
-    Determine whether a record represents an
-    undergraduate programme.
-    """
 
     record_id = normalize_text(
         record.get(
@@ -790,12 +1431,14 @@ def is_undergraduate_record(record):
         )
     )
 
+
     subcategory = normalize_text(
         record.get(
             "Subcategory",
             ""
         )
     )
+
 
     title = normalize_text(
         record.get(
@@ -804,26 +1447,24 @@ def is_undergraduate_record(record):
         )
     )
 
+
     if not record_id.startswith(
         "prog_"
     ):
+
         return False
+
 
     return (
         "undergraduate" in subcategory
-        or title.startswith("bsc")
+        or
+        title.startswith(
+            "bsc"
+        )
     )
 
 
-# =========================================================
-# Identify postgraduate record
-# =========================================================
-
 def is_postgraduate_record(record):
-    """
-    Determine whether a record represents a
-    postgraduate programme.
-    """
 
     record_id = normalize_text(
         record.get(
@@ -832,12 +1473,14 @@ def is_postgraduate_record(record):
         )
     )
 
+
     subcategory = normalize_text(
         record.get(
             "Subcategory",
             ""
         )
     )
+
 
     title = normalize_text(
         record.get(
@@ -846,26 +1489,24 @@ def is_postgraduate_record(record):
         )
     )
 
+
     if not record_id.startswith(
         "prog_"
     ):
+
         return False
+
 
     return (
         "postgraduate" in subcategory
-        or title.startswith("msc")
+        or
+        title.startswith(
+            "msc"
+        )
     )
 
 
-# =========================================================
-# Detect three-year programme
-# =========================================================
-
 def is_three_year_record(record):
-    """
-    Check whether a programme has a three-year
-    duration.
-    """
 
     duration = normalize_text(
         record.get(
@@ -873,6 +1514,7 @@ def is_three_year_record(record):
             ""
         )
     )
+
 
     return bool(
         re.search(
@@ -883,17 +1525,15 @@ def is_three_year_record(record):
 
 
 # =========================================================
-# Metadata-aware retrieval
+# Metadata retrieval
 # =========================================================
 
 def metadata_retrieve(question):
-    """
-    Handle structured and multi-answer queries.
-    """
 
     q = normalize_text(
         question
     )
+
 
     records = get_all_records()
 
@@ -904,31 +1544,43 @@ def metadata_retrieve(question):
         )
     )
 
+
     postgraduate_request = (
         detect_postgraduate_request(
             question
         )
     )
 
+
     list_intent = detect_list_intent(
         question
     )
 
 
-    # -----------------------------------------------------
-    # Department list query
-    # -----------------------------------------------------
+    # =====================================================
+    # Existing Member 1 FOICDT department list
+    # =====================================================
 
     department_list_request = (
+
         (
             "departments" in q
-            or "different departments" in q
-            or "each department" in q
+            or
+            "different departments" in q
+            or
+            "each department" in q
         )
-        and (
+
+        and
+
+        (
             "foicdt" in q
-            or "heads" in q
-            or "head" in q
+            or
+            "heads" in q
+            or
+            "head" in q
+            or
+            "make up" in q
         )
     )
 
@@ -936,16 +1588,23 @@ def metadata_retrieve(question):
     if department_list_request:
 
         department_records = [
+
             record
+
             for record in records
+
             if (
                 str(
                     record.get(
                         "ID",
                         ""
                     )
-                ).startswith("FAC_")
+                ).startswith(
+                    "FAC_"
+                )
+
                 and
+
                 "department"
                 in normalize_text(
                     record.get(
@@ -967,28 +1626,570 @@ def metadata_retrieve(question):
 
 
         return [
+
             build_result(
                 record=record,
                 score=1.0,
                 retrieval_mode="metadata"
             )
+
             for record
             in department_records
         ]
 
 
-    # -----------------------------------------------------
-    # Undergraduate list / filter
-    # -----------------------------------------------------
+    # =====================================================
+    # Helper for exact Member 3 metadata routes
+    # =====================================================
+
+    def result_for_id(record_id):
+
+        record = next(
+            (
+                record
+                for record in records
+                if str(
+                    record.get(
+                        "ID",
+                        ""
+                    )
+                ) == record_id
+            ),
+            None
+        )
+
+
+        if record is None:
+
+            return None
+
+
+        return [
+
+            build_result(
+                record=record,
+                score=1.0,
+                retrieval_mode="metadata"
+            )
+        ]
+
+
+    # =====================================================
+    # Member 3 contacts
+    # =====================================================
+
+    contact_signal = contains_any_phrase(
+        q,
+        [
+            "contact",
+            "telephone",
+            "phone",
+            "email",
+            "address",
+            "located"
+        ]
+    )
+
+
+    if (
+        contains_any_phrase(
+            q,
+            [
+                "admissions and student records office",
+                "asro"
+            ]
+        )
+        and
+        contact_signal
+    ):
+
+        return result_for_id(
+            "M3_CONTACT_002"
+        )
+
+
+    if contains_any_phrase(
+        q,
+        [
+            "examinations office",
+            "examination office"
+        ]
+    ):
+
+        return result_for_id(
+            "M3_CONTACT_003"
+        )
+
+
+    if (
+        "library" in q
+        and
+        contact_signal
+    ):
+
+        return result_for_id(
+            "M3_CONTACT_004"
+        )
+
+
+    if (
+        contains_any_phrase(
+            q,
+            [
+                "international affairs office",
+                "international student",
+                "international students"
+            ]
+        )
+        and
+        contact_signal
+    ):
+
+        return result_for_id(
+            "M3_CONTACT_005"
+        )
+
+
+    if (
+        contact_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "uom",
+                "university of mauritius"
+            ]
+        )
+    ):
+
+        return result_for_id(
+            "M3_CONTACT_001"
+        )
+
+
+    # =====================================================
+    # Member 3 faculties
+    # =====================================================
+
+    faculty_word_signal = contains_any_phrase(
+        q,
+        [
+            "faculty",
+            "faculties"
+        ]
+    )
+
+
+    specific_faculty_phrases = [
+
+        "faculty of agriculture",
+
+        "faculty of engineering",
+
+        "faculty of information",
+
+        "faculty of law",
+
+        "faculty of medicine",
+
+        "faculty of science",
+
+        "faculty of social sciences"
+    ]
+
+
+    faculty_list_request = (
+
+        faculty_word_signal
+
+        and
+
+        not contains_any_phrase(
+            q,
+            specific_faculty_phrases
+        )
+
+        and
+
+        contains_any_phrase(
+            q,
+            [
+                "what faculties",
+                "which faculties",
+                "faculties available",
+                "list faculties",
+                "list the faculties",
+                "how many faculties"
+            ]
+        )
+    )
+
+
+    if faculty_list_request:
+
+        faculty_records = [
+
+            record
+
+            for record in records
+
+            if str(
+                record.get(
+                    "ID",
+                    ""
+                )
+            ).startswith(
+                "M3_FAC_"
+            )
+        ]
+
+
+        faculty_records.sort(
+            key=lambda record:
+            record.get(
+                "ID",
+                ""
+            )
+        )
+
+
+        return [
+
+            build_result(
+                record=record,
+                score=1.0,
+                retrieval_mode="metadata"
+            )
+
+            for record
+            in faculty_records
+        ]
+
+
+    cybersecurity_signal = contains_any_phrase(
+        q,
+        [
+            "cybersecurity",
+            "cyber security"
+        ]
+    )
+
+
+    if (
+        cybersecurity_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "faculty",
+                "department"
+            ]
+        )
+    ):
+
+        return result_for_id(
+            "M3_FAC_003"
+        )
+
+
+    faculty_department_map = {
+
+        "faculty of agriculture":
+            "M3_FAC_001",
+
+        "faculty of engineering":
+            "M3_FAC_002",
+
+        "faculty of law & management":
+            "M3_FAC_004",
+
+        "faculty of law and management":
+            "M3_FAC_004",
+
+        "faculty of medicine and health sciences":
+            "M3_FAC_005",
+
+        "faculty of science":
+            "M3_FAC_006",
+
+        "faculty of social sciences & humanities":
+            "M3_FAC_007",
+
+        "faculty of social sciences and humanities":
+            "M3_FAC_007"
+    }
+
+
+    if contains_phrase(
+        q,
+        "departments"
+    ):
+
+        for (
+            faculty_phrase,
+            record_id
+        ) in faculty_department_map.items():
+
+            if faculty_phrase in q:
+
+                return result_for_id(
+                    record_id
+                )
+
+
+    # =====================================================
+    # Member 3 examination regulations
+    # =====================================================
+
+    examination_signal = contains_any_phrase(
+        q,
+        [
+            "exam",
+            "exams",
+
+            "examination",
+            "examinations"
+        ]
+    )
+
+
+    illness_signal = contains_any_phrase(
+        q,
+        [
+            "sick",
+            "ill",
+            "illness",
+
+            "medical",
+            "medical certificate",
+
+            "miss",
+            "missed",
+
+            "absence",
+            "absent"
+        ]
+    )
+
+
+    if (
+        examination_signal
+        and
+        illness_signal
+    ):
+
+        return result_for_id(
+            "M3_EXAM_002"
+        )
+
+
+    if (
+        examination_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "unauthorised device",
+                "unauthorized device",
+
+                "phone",
+                "mobile phone",
+
+                "device"
+            ]
+        )
+    ):
+
+        return result_for_id(
+            "M3_EXAM_001"
+        )
+
+
+    # =====================================================
+    # Member 3 academic integrity
+    # =====================================================
+
+    if contains_phrase(
+        q,
+        "plagiarism"
+    ):
+
+        return result_for_id(
+            "M3_INT_001"
+        )
+
+
+    final_project_signal = contains_any_phrase(
+        q,
+        [
+            "final year project",
+            "final year projects",
+
+            "dissertation",
+            "dissertations"
+        ]
+    )
+
+
+    ai_signal = contains_any_phrase(
+        q,
+        [
+            "artificial intelligence",
+            "ai"
+        ]
+    )
+
+
+    if (
+        final_project_signal
+        and
+        ai_signal
+    ):
+
+        return result_for_id(
+            "M3_FYP_002"
+        )
+
+
+    if (
+        ai_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "use",
+                "using",
+
+                "university work",
+                "academic work",
+
+                "assignment",
+                "assignments",
+
+                "cite",
+                "citing",
+
+                "acknowledge",
+
+                "attributed"
+            ]
+        )
+    ):
+
+        return result_for_id(
+            "M3_INT_002"
+        )
+
+
+    # =====================================================
+    # Member 3 resits and retakes
+    # =====================================================
+
+    if (
+        contains_any_phrase(
+            q,
+            [
+                "resit",
+                "resits"
+            ]
+        )
+        and
+        contains_any_phrase(
+            q,
+            [
+                "retake",
+                "retakes"
+            ]
+        )
+    ):
+
+        return result_for_id(
+            "M3_ASSESS_003"
+        )
+
+
+    # =====================================================
+    # Member 3 final year project / dissertation
+    # =====================================================
+
+    if (
+        final_project_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "rule",
+                "rules",
+
+                "regulation",
+                "regulations",
+
+                "requirement",
+                "requirements"
+            ]
+        )
+    ):
+
+        return result_for_id(
+            "M3_FYP_001"
+        )
+
+
+    # =====================================================
+    # Member 3 financial assistance
+    # =====================================================
+
+    if contains_any_phrase(
+        q,
+        [
+            "financial assistance",
+            "student financial assistance"
+        ]
+    ):
+
+        return result_for_id(
+            "M3_SUPPORT_004"
+        )
+
+
+    # =====================================================
+    # Member 3 student conduct
+    # =====================================================
+
+    if contains_any_phrase(
+        q,
+        [
+            "discipline",
+            "disciplinary",
+
+            "breaks university rules",
+            "breach university rules",
+
+            "student conduct"
+        ]
+    ):
+
+        return result_for_id(
+            "M3_CONDUCT_002"
+        )
+
+
+    # =====================================================
+    # Existing Member 1 undergraduate programme lists
+    # =====================================================
 
     if (
         undergraduate_request
-        and list_intent
+        and
+        list_intent
     ):
 
         programme_records = [
+
             record
+
             for record in records
+
             if is_undergraduate_record(
                 record
             )
@@ -996,22 +2197,33 @@ def metadata_retrieve(question):
 
 
         asks_for_three_years = (
+
             bool(
                 re.search(
                     r"\b3\s*(year|years|yr|yrs)\b",
                     q
                 )
             )
-            or "three years" in q
-            or "three year" in q
+
+            or
+
+            "three years" in q
+
+            or
+
+            "three year" in q
         )
 
 
         if asks_for_three_years:
 
             programme_records = [
+
                 record
-                for record in programme_records
+
+                for record
+                in programme_records
+
                 if is_three_year_record(
                     record
                 )
@@ -1028,28 +2240,34 @@ def metadata_retrieve(question):
 
 
         return [
+
             build_result(
                 record=record,
                 score=1.0,
                 retrieval_mode="metadata"
             )
+
             for record
             in programme_records
         ]
 
 
-    # -----------------------------------------------------
-    # Postgraduate list
-    # -----------------------------------------------------
+    # =====================================================
+    # Existing Member 1 postgraduate programme lists
+    # =====================================================
 
     if (
         postgraduate_request
-        and list_intent
+        and
+        list_intent
     ):
 
         programme_records = [
+
             record
+
             for record in records
+
             if is_postgraduate_record(
                 record
             )
@@ -1066,11 +2284,13 @@ def metadata_retrieve(question):
 
 
         return [
+
             build_result(
                 record=record,
                 score=1.0,
                 retrieval_mode="metadata"
             )
+
             for record
             in programme_records
         ]
@@ -1080,21 +2300,18 @@ def metadata_retrieve(question):
 
 
 # =========================================================
-# Intent-based reranking
+# Intent-specific reranking
 # =========================================================
 
 def calculate_intent_boost(
     question,
     record
 ):
-    """
-    Apply small boosts for clearly identifiable
-    query intents.
-    """
 
     q = normalize_text(
         question
     )
+
 
     record_id = str(
         record.get(
@@ -1107,24 +2324,24 @@ def calculate_intent_boost(
     boost = 0.0
 
 
-    # -----------------------------------------------------
-    # Administrative fees
-    # -----------------------------------------------------
+    # =====================================================
+    # MEMBER 1 INTENTS
+    # =====================================================
 
     administrative_signal = (
         "administrative" in q
     )
 
-    fee_signal = any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in [
+
+    fee_signal = contains_any_phrase(
+        q,
+        [
             "fee",
             "fees",
+
             "charge",
             "charges",
+
             "cost",
             "costs"
         ]
@@ -1133,27 +2350,26 @@ def calculate_intent_boost(
 
     if (
         record_id == "ADM_003"
-        and administrative_signal
-        and fee_signal
+        and
+        administrative_signal
+        and
+        fee_signal
     ):
+
         boost += 0.20
 
 
-    # -----------------------------------------------------
-    # Payment methods
-    # -----------------------------------------------------
-
-    payment_signal = any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in [
+    payment_signal = contains_any_phrase(
+        q,
+        [
             "payment",
             "payments",
+
             "pay",
             "paying",
+
             "settle",
+
             "means"
         ]
     )
@@ -1161,21 +2377,16 @@ def calculate_intent_boost(
 
     if (
         record_id == "ADM_004"
-        and payment_signal
+        and
+        payment_signal
     ):
-        boost += 0.12
+
+        boost += 0.20
 
 
-    # -----------------------------------------------------
-    # Required documents
-    # -----------------------------------------------------
-
-    document_signal = any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in [
+    document_signal = contains_any_phrase(
+        q,
+        [
             "document",
             "documents",
             "paperwork"
@@ -1185,24 +2396,21 @@ def calculate_intent_boost(
 
     if (
         record_id == "ADM_001"
-        and document_signal
+        and
+        document_signal
     ):
+
         boost += 0.12
 
 
-    # -----------------------------------------------------
-    # Eligibility
-    # -----------------------------------------------------
-
-    eligibility_signal = any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in [
+    eligibility_signal = contains_any_phrase(
+        q,
+        [
             "eligible",
             "eligibility",
+
             "qualifications",
+
             "qualify"
         ]
     )
@@ -1210,28 +2418,28 @@ def calculate_intent_boost(
 
     if (
         record_id == "ADM_002"
-        and eligibility_signal
+        and
+        eligibility_signal
     ):
+
         boost += 0.12
 
 
-    # -----------------------------------------------------
-    # Cybersecurity programme intent
-    # -----------------------------------------------------
-
-    cybersecurity_signal = any(
-        contains_phrase(
-            q,
-            term
-        )
-        for term in [
+    cybersecurity_signal = contains_any_phrase(
+        q,
+        [
             "cybersecurity",
             "cyber security",
+
             "security",
+
             "protect",
             "protecting",
+
             "hackers",
+
             "malware",
+
             "cyber attack",
             "cyber attacks"
         ]
@@ -1243,9 +2451,682 @@ def calculate_intent_boost(
             "PROG_006",
             "PROG_007"
         ]
-        and cybersecurity_signal
+        and
+        cybersecurity_signal
     ):
+
         boost += 0.08
+
+
+    # =====================================================
+    # MEMBER 2 ACADEMIC INFORMATION
+    # =====================================================
+
+    semester_1 = contains_phrase(
+        q,
+        "semester 1"
+    )
+
+
+    semester_2 = contains_phrase(
+        q,
+        "semester 2"
+    )
+
+
+    exam_signal = contains_any_phrase(
+        q,
+        [
+            "exam",
+            "exams",
+
+            "examination",
+            "examinations"
+        ]
+    )
+
+
+    lecture_signal = contains_any_phrase(
+        q,
+        [
+            "lecture",
+            "lectures"
+        ]
+    )
+
+
+    registration_signal = (
+        "registration" in q
+        and
+        "module" in q
+    )
+
+
+    if (
+        record_id == "ACAD_001"
+        and
+        semester_1
+        and
+        lecture_signal
+    ):
+
+        boost += 0.25
+
+
+    if (
+        record_id == "ACAD_002"
+        and
+        semester_1
+        and
+        registration_signal
+        and
+        "late" not in q
+        and
+        "penalty" not in q
+    ):
+
+        boost += 0.25
+
+
+    if (
+        record_id == "ACAD_003"
+        and
+        "floating week" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_004"
+        and
+        (
+            "late registration" in q
+            or
+            "penalty" in q
+        )
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_005"
+        and
+        semester_1
+        and
+        exam_signal
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_006"
+        and
+        "induction" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_007"
+        and
+        semester_2
+        and
+        lecture_signal
+    ):
+
+        boost += 0.25
+
+
+    if (
+        record_id == "ACAD_008"
+        and
+        semester_2
+        and
+        registration_signal
+    ):
+
+        boost += 0.25
+
+
+    if (
+        record_id == "ACAD_009"
+        and
+        (
+            "students week" in q
+            or
+            "students' week" in q
+        )
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_010"
+        and
+        semester_2
+        and
+        "revision" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_011"
+        and
+        semester_2
+        and
+        exam_signal
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "ACAD_012"
+        and
+        "graduation" in q
+    ):
+
+        boost += 0.30
+
+
+    # =====================================================
+    # MEMBER 2 STUDENT SERVICES
+    # =====================================================
+
+    library_signal = (
+        "library" in q
+    )
+
+
+    opening_signal = contains_any_phrase(
+        q,
+        [
+            "open",
+            "opening",
+            "hours"
+        ]
+    )
+
+
+    borrowing_signal = contains_any_phrase(
+        q,
+        [
+            "borrow",
+            "borrowing",
+            "books"
+        ]
+    )
+
+
+    if (
+        record_id == "SERV_001"
+        and
+        library_signal
+        and
+        opening_signal
+        and
+        (
+            "term" in q
+            or
+            "term time" in q
+        )
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_002"
+        and
+        library_signal
+        and
+        opening_signal
+        and
+        "vacation" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_003"
+        and
+        borrowing_signal
+        and
+        "undergraduate" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_004"
+        and
+        borrowing_signal
+        and
+        "academic staff" in q
+        and
+        "non academic" not in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_005"
+        and
+        borrowing_signal
+        and
+        (
+            "mphil" in q
+            or
+            "phd" in q
+        )
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_006"
+        and
+        borrowing_signal
+        and
+        "law" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_007"
+        and
+        borrowing_signal
+        and
+        "non academic" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_008"
+        and
+        "cits" in q
+        and
+        "lab" in q
+        and
+        "main" in q
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_009"
+        and
+        "cits" in q
+        and
+        (
+            "1a" in q
+            or
+            "1b" in q
+            or
+            "1c" in q
+        )
+    ):
+
+        boost += 0.30
+
+
+    if (
+        record_id == "SERV_012"
+        and
+        "mcb" in q
+        and
+        "account" in q
+    ):
+
+        boost += 0.35
+
+
+    if (
+        record_id == "SERV_013"
+        and
+        "sbm" in q
+        and
+        (
+            "mur" in q
+            or
+            "rupee" in q
+            or
+            "rupees" in q
+        )
+    ):
+
+        boost += 0.35
+
+
+    if (
+        record_id == "SERV_014"
+        and
+        "sbm" in q
+        and
+        (
+            "usd" in q
+            or
+            "dollar" in q
+            or
+            "dollars" in q
+        )
+    ):
+
+        boost += 0.35
+
+
+    if (
+        record_id == "SERV_015"
+        and
+        (
+            "my.t" in q
+            or
+            "blink" in q
+            or
+            (
+                "mobile" in q
+                and
+                "payment" in q
+            )
+            or
+            (
+                "digital" in q
+                and
+                "payment" in q
+            )
+        )
+    ):
+
+        boost += 0.35
+
+
+    # =====================================================
+    # MEMBER 3 CONTACTS
+    # =====================================================
+
+    contact_signal = contains_any_phrase(
+        q,
+        [
+            "contact",
+            "telephone",
+            "phone",
+            "email",
+            "address",
+            "located"
+        ]
+    )
+
+
+    if (
+        record_id == "M3_CONTACT_001"
+        and
+        contact_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "uom",
+                "university of mauritius"
+            ]
+        )
+    ):
+
+        boost += 0.40
+
+
+    if (
+        record_id == "M3_CONTACT_002"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "admissions and student records office",
+                "asro"
+            ]
+        )
+    ):
+
+        boost += 0.45
+
+
+    if (
+        record_id == "M3_CONTACT_003"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "examinations office",
+                "examination office"
+            ]
+        )
+    ):
+
+        boost += 0.45
+
+
+    if (
+        record_id == "M3_CONTACT_004"
+        and
+        "library" in q
+        and
+        contact_signal
+    ):
+
+        boost += 0.45
+
+
+    # =====================================================
+    # MEMBER 3 FACULTIES
+    # =====================================================
+
+    if (
+        record_id == "M3_FAC_003"
+        and
+        cybersecurity_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "faculty",
+                "department"
+            ]
+        )
+    ):
+
+        boost += 0.50
+
+
+    # =====================================================
+    # MEMBER 3 EXAMINATIONS
+    # =====================================================
+
+    if (
+        record_id == "M3_EXAM_002"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "sick",
+                "ill",
+                "illness",
+
+                "medical certificate",
+
+                "absence",
+                "absent",
+
+                "miss",
+                "missed"
+            ]
+        )
+        and
+        exam_signal
+    ):
+
+        boost += 0.45
+
+
+    if (
+        record_id == "M3_EXAM_001"
+        and
+        exam_signal
+        and
+        contains_any_phrase(
+            q,
+            [
+                "unauthorised device",
+                "unauthorized device",
+                "device",
+                "phone"
+            ]
+        )
+    ):
+
+        boost += 0.45
+
+
+    # =====================================================
+    # MEMBER 3 ACADEMIC INTEGRITY
+    # =====================================================
+
+    if (
+        record_id == "M3_INT_001"
+        and
+        "plagiarism" in q
+    ):
+
+        boost += 0.50
+
+
+    if (
+        record_id == "M3_INT_002"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "artificial intelligence",
+                "ai"
+            ]
+        )
+        and
+        contains_any_phrase(
+            q,
+            [
+                "use",
+                "using",
+
+                "university work",
+                "academic work",
+
+                "assignment",
+                "assignments"
+            ]
+        )
+    ):
+
+        boost += 0.50
+
+
+    # =====================================================
+    # MEMBER 3 ASSESSMENT
+    # =====================================================
+
+    if (
+        record_id == "M3_ASSESS_003"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "resit",
+                "resits",
+
+                "retake",
+                "retakes"
+            ]
+        )
+    ):
+
+        boost += 0.50
+
+
+    # =====================================================
+    # MEMBER 3 FINAL YEAR PROJECT
+    # =====================================================
+
+    if (
+        record_id == "M3_FYP_001"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "final year project",
+                "final year projects",
+
+                "dissertation",
+                "dissertations"
+            ]
+        )
+    ):
+
+        boost += 0.45
+
+
+    # =====================================================
+    # MEMBER 3 FINANCIAL ASSISTANCE
+    # =====================================================
+
+    if (
+        record_id == "M3_SUPPORT_004"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "financial assistance",
+                "student welfare"
+            ]
+        )
+    ):
+
+        boost += 0.50
+
+
+    # =====================================================
+    # MEMBER 3 STUDENT CONDUCT
+    # =====================================================
+
+    if (
+        record_id == "M3_CONDUCT_002"
+        and
+        contains_any_phrase(
+            q,
+            [
+                "discipline",
+                "disciplinary",
+
+                "university rules",
+
+                "student conduct"
+            ]
+        )
+    ):
+
+        boost += 0.50
 
 
     return boost
@@ -1260,23 +3141,13 @@ def retrieve(
     top_k=3,
     min_semantic_score=DEFAULT_MIN_SEMANTIC_SCORE
 ):
-    """
-    Main hybrid retrieval function.
-
-    Stages:
-    1. Validate question
-    2. Check UoM domain intent
-    3. Try metadata retrieval
-    4. Use FAISS semantic search
-    5. Apply title and intent reranking
-    6. Reject weak semantic matches
-    """
 
     # -----------------------------------------------------
     # Validate question
     # -----------------------------------------------------
 
     if not question:
+
         return []
 
 
@@ -1284,22 +3155,24 @@ def retrieve(
 
 
     if not question:
+
         return []
 
 
-    # -----------------------------------------------------
-    # Domain intent check
-    # -----------------------------------------------------
+    # =====================================================
+    # Domain validation
+    # =====================================================
 
     if not is_uom_domain_question(
         question
     ):
+
         return []
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # Metadata retrieval
-    # -----------------------------------------------------
+    # =====================================================
 
     metadata_results = metadata_retrieve(
         question
@@ -1307,12 +3180,13 @@ def retrieve(
 
 
     if metadata_results is not None:
+
         return metadata_results
 
 
-    # -----------------------------------------------------
-    # Encode question
-    # -----------------------------------------------------
+    # =====================================================
+    # Generate query embedding
+    # =====================================================
 
     question_embedding = model.encode(
         [question],
@@ -1321,14 +3195,14 @@ def retrieve(
     )
 
 
-    # -----------------------------------------------------
+    # =====================================================
     # Candidate retrieval
-    # -----------------------------------------------------
+    # =====================================================
 
     candidate_k = min(
         max(
-            top_k * 2,
-            5
+            top_k * 3,
+            10
         ),
         index.ntotal
     )
@@ -1350,9 +3224,9 @@ def retrieve(
     )
 
 
-    # -----------------------------------------------------
-    # Detect explicit Top-Up wording
-    # -----------------------------------------------------
+    # =====================================================
+    # Cybersecurity Top-Up wording
+    # =====================================================
 
     question_mentions_top_up = bool(
         re.search(
@@ -1362,9 +3236,9 @@ def retrieve(
     )
 
 
-    # -----------------------------------------------------
-    # Process candidates
-    # -----------------------------------------------------
+    # =====================================================
+    # Process FAISS candidates
+    # =====================================================
 
     for (
         semantic_score,
@@ -1375,6 +3249,7 @@ def retrieve(
     ):
 
         if index_position == -1:
+
             continue
 
 
@@ -1383,20 +3258,18 @@ def retrieve(
         )
 
 
-        # -------------------------------------------------
-        # Semantic relevance threshold
-        # -------------------------------------------------
-
         if (
             semantic_score
             < min_semantic_score
         ):
+
             continue
 
 
         item = metadata[
             index_position
         ]
+
 
         record = item[
             "record"
@@ -1408,13 +3281,14 @@ def retrieve(
             ""
         )
 
+
         normalized_title = normalize_text(
             title
         )
 
 
         # -------------------------------------------------
-        # Title score
+        # Title match
         # -------------------------------------------------
 
         title_match = calculate_title_match(
@@ -1424,7 +3298,7 @@ def retrieve(
 
 
         # -------------------------------------------------
-        # Intent score
+        # Intent boost
         # -------------------------------------------------
 
         intent_boost = calculate_intent_boost(
@@ -1434,22 +3308,29 @@ def retrieve(
 
 
         # -------------------------------------------------
-        # Final hybrid score
+        # Hybrid score
         # -------------------------------------------------
 
         final_score = (
+
             semantic_score
-            + (
+
+            +
+
+            (
                 0.25
                 * title_match
             )
-            + intent_boost
+
+            +
+
+            intent_boost
         )
 
 
-        # -------------------------------------------------
-        # Top-Up disambiguation
-        # -------------------------------------------------
+        # =================================================
+        # Cybersecurity Top-Up disambiguation
+        # =================================================
 
         title_is_top_up = bool(
             re.search(
@@ -1470,15 +3351,20 @@ def retrieve(
                 final_score -= 0.08
 
 
-        # -------------------------------------------------
+        # =================================================
         # Build result
-        # -------------------------------------------------
+        # =================================================
 
         result = build_result(
+
             record=record,
+
             semantic_score=semantic_score,
+
             title_match=title_match,
+
             score=final_score,
+
             retrieval_mode="hybrid"
         )
 
@@ -1488,9 +3374,9 @@ def retrieve(
         )
 
 
-    # -----------------------------------------------------
-    # Sort by final score
-    # -----------------------------------------------------
+    # =====================================================
+    # Sort by final hybrid score
+    # =====================================================
 
     results.sort(
         key=lambda result:
@@ -1499,9 +3385,9 @@ def retrieve(
     )
 
 
-    # -----------------------------------------------------
-    # Return final results
-    # -----------------------------------------------------
+    # =====================================================
+    # Return requested number of results
+    # =====================================================
 
     return results[
         :top_k
@@ -1509,7 +3395,7 @@ def retrieve(
 
 
 # =========================================================
-# Manual testing
+# Manual combined integration tests
 # =========================================================
 
 if __name__ == "__main__":
@@ -1517,44 +3403,53 @@ if __name__ == "__main__":
     test_questions = [
 
         (
-            "List every undergraduate degree "
-            "available under FOICDT."
+            "What cybersecurity programmes "
+            "are available?"
         ),
 
         (
-            "Can I have a description about the "
-            "BSc (Hons) Software Engineering programmes?"
+            "When do Semester 1 examinations "
+            "start and end?"
         ),
 
         (
-            "I want to study a degree focused on "
-            "protecting computer systems and networks. "
-            "What undergraduate programme does FOICDT offer?"
+            "What are the UoM library opening "
+            "hours during term time?"
         ),
 
         (
-            "Show me all the bachelor's programmes "
-            "offered by FOICDT."
+            "How many books can undergraduate "
+            "students borrow from the library?"
         ),
 
         (
-            "Which FOICDT bachelor's degrees take "
-            "three years to complete?"
+            "Where is the main CITS Computer "
+            "Lab located?"
         ),
 
         (
-            "Which Master's programmes can I study "
-            "under FOICDT?"
+            "What is the MCB bank account number "
+            "for UoM payments?"
         ),
 
         (
-            "I would like information about the yearly "
-            "administrative charges for Mauritian students."
+            "What digital and mobile payment apps "
+            "are accepted by UoM?"
         ),
 
         (
-            "How can I protect my personal laptop "
-            "from malware and hackers?"
+            "What is the tuition fee for studying "
+            "Computer Science at Harvard University?"
+        ),
+
+        (
+            "Who is the Prime Minister "
+            "of Australia?"
+        ),
+
+        (
+            "Does UoM offer free accommodation "
+            "and flights to international students?"
         ),
 
         (
@@ -1563,12 +3458,28 @@ if __name__ == "__main__":
         ),
 
         (
-            "What programming language should a "
-            "beginner learn first?"
+            "How can I pay my electricity "
+            "bill online?"
         ),
 
         (
-            "How do I apply for a passport in Mauritius?"
+            "How can I contact the "
+            "University of Mauritius?"
+        ),
+
+        (
+            "What counts as plagiarism "
+            "at UoM?"
+        ),
+
+        (
+            "Can I use Artificial Intelligence "
+            "in my university work?"
+        ),
+
+        (
+            "What should I do if I miss an "
+            "examination because I am sick?"
         )
     ]
 
@@ -1598,9 +3509,11 @@ if __name__ == "__main__":
                 "RETRIEVAL MODE: NONE"
             )
 
+
             print(
                 "No relevant UoM information found."
             )
+
 
             continue
 
@@ -1611,7 +3524,10 @@ if __name__ == "__main__":
         )
 
 
-        for number, result in enumerate(
+        for (
+            number,
+            result
+        ) in enumerate(
             results,
             start=1
         ):

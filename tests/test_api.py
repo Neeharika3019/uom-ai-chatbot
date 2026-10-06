@@ -38,7 +38,6 @@ client = TestClient(app)
 # =========================================================
 # Test root endpoint
 # =========================================================
-
 def test_root():
 
     response = client.get("/")
@@ -47,7 +46,8 @@ def test_root():
 
     data = response.json()
 
-    assert data["service"] == "UoM AI Chatbot Retrieval API"
+    assert data["service"] == "UoM AI Chatbot API"
+    assert data["version"] == "2.0.0"
     assert data["status"] == "running"
 
 

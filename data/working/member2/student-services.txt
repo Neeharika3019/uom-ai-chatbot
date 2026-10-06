@@ -1,0 +1,45 @@
+# UNIVERSITY OF MAURITIUS (UoM) - KNOWLEDGE BASE DATASET
+# CATEGORY: STUDENT SERVICES
+# COLLECTED BY: MEMBER B (TEAM MEMBER 2)
+
+================================================================================
+SECTION 1: UoM LIBRARY SERVICES & REGULATIONS
+================================================================================
+
+1.1 Library Opening Hours (Term Time): Weekdays (Monday to Friday): 08:00–17:00, Saturdays: 08:00–13:00.
+1.2 Library Opening Hours (Vacation Period): Weekdays (Monday to Friday): 08:00–16:00, Saturdays: 08:00–12:00 (Noon).
+
+1.3 Library Membership & Borrowing Allowances: All borrowers must present a valid UoM Student/Staff ID card to borrow books.
+- Academic Staff: Up to 6 books (including 2 from the Reserve Section)
+- MPhil / PhD Students: Up to 5 books (including 1 from the Reserve Section)
+- Undergraduate Students: Up to 3 books (including 1 from the Reserve Section)
+- Law Students: Up to 3 books (including 1 from the Reserve Section)
+- Non-Academic Staff: Up to 1 book
+Reference Link: https://www.uom.ac.mu/index.php/library/library-regulations/membership
+
+================================================================================
+SECTION 2: CAMPUS FACILITIES & COMPUTER LAB LOCATIONS
+================================================================================
+
+2.1 Location of Computer Labs (CITS & Faculty Labs):
+- CITS Computer Lab Main: Ex-Student Common Room, First Floor, VCILT Building
+- CITS Lab 1A: Phase II Engineering Building
+- CITS Lab 1B: Phase II Engineering Building
+- CITS Lab 1C: Phase II Engineering Building
+- CITS FSSH Lab: Ground Floor, Faculty of Social Sciences & Humanities (FSSH) Building
+- CITS FOA Lab 1A: First Floor, Faculty of Agriculture (FOA) Building
+- CITS FOA Lab 2A: Second Floor, Faculty of Agriculture (FOA) Building
+- CITS ETB Lab: First Floor, Prof E. Lim Fat Building
+- Bioinformatics Lab: First Floor, Prof E. Lim Fat Building
+- CITS Ebene Core Lab: 2nd Floor, The Core Building, Ebene
+
+================================================================================
+SECTION 3: PAYMENT METHODS & FINANCIAL SERVICES
+================================================================================
+
+3.1 Available Payment Facilities at UoM:
+(a) Online Credit Card Payment: "Pay Online" portal supporting Credit Card payments in USD or MUR at https://apply.uom.ac.mu/UOMonlinePay/uomonlinepay.aspx
+(b) The Mauritius Commercial Bank Ltd (MCB) Direct Transfer: Account Name: UoM Bank Account, Account Number: 000142555444 via MCB Internet Banking & MCB JUICE Mobile App
+(c) SBM Bank (Mauritius) Ltd - Mauritian Rupees (MUR): Account Number: 62025100002399 via SBM Internet Banking
+(d) SBM Bank (Mauritius) Ltd - US Dollars (USD): Account Number: 61026000014607
+(e) Digital & Mobile Payment Apps Accepted: my.t Billpay (my.t money mobile app) and BLINK mobile payment application.
