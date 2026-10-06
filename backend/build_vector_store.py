@@ -39,6 +39,11 @@ MEMBER2_FILE = (
     / "member2_knowledge.json"
 )
 
+MEMBER3_FILE = (
+    PROCESSED_DIR
+    / "member3_knowledge.json"
+)
+
 
 INDEX_FILE = (
     VECTOR_DB_DIR
@@ -107,11 +112,41 @@ def create_search_text(record):
     """
 
     searchable_fields = [
-        ("Title", record.get("Title", "")),
-        ("Category", record.get("Category", "")),
-        ("Subcategory", record.get("Subcategory", "")),
-        ("Faculty", record.get("Faculty", "")),
-        ("Duration", record.get("Duration", "")),
+        (
+            "Title",
+            record.get(
+                "Title",
+                ""
+            )
+        ),
+        (
+            "Category",
+            record.get(
+                "Category",
+                ""
+            )
+        ),
+        (
+            "Subcategory",
+            record.get(
+                "Subcategory",
+                ""
+            )
+        ),
+        (
+            "Faculty",
+            record.get(
+                "Faculty",
+                ""
+            )
+        ),
+        (
+            "Duration",
+            record.get(
+                "Duration",
+                ""
+            )
+        ),
         (
             "Academic Year",
             record.get(
@@ -222,6 +257,17 @@ def main():
 
 
     # -----------------------------------------------------
+    # Load Member 3 dataset
+    # -----------------------------------------------------
+
+    member3_records = (
+        load_json_records(
+            MEMBER3_FILE
+        )
+    )
+
+
+    # -----------------------------------------------------
     # Combine all knowledge records
     # -----------------------------------------------------
 
@@ -229,6 +275,7 @@ def main():
         programme_records
         + admission_records
         + member2_records
+        + member3_records
     )
 
 
@@ -245,6 +292,11 @@ def main():
     print(
         f"Member 2 records: "
         f"{len(member2_records)}"
+    )
+
+    print(
+        f"Member 3 records: "
+        f"{len(member3_records)}"
     )
 
     print(
