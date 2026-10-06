@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.retriever import retrieve
+from backend.chat_engine import answer_question
 
 
 # =========================================================
@@ -9,36 +10,51 @@ from backend.retriever import retrieve
 # =========================================================
 
 app = FastAPI(
-    title="UoM AI Chatbot Retrieval API",
+    title="UoM AI Chatbot API",
     description=(
-        "Backend retrieval API for the University of Mauritius "
-        "AI chatbot project."
+        "Retrieval and RAG chatbot API for the "
+        "University of Mauritius AI Chatbot project."
     ),
-    version="1.0.0"
+    version="2.0.0"
 )
 
 
 # =========================================================
-# Request model
+# Request models
 # =========================================================
 
 class RetrievalRequest(BaseModel):
-    """
-    Data expected from the client when asking
-    the retrieval system a question.
-    """
 
     question: str = Field(
         ...,
         min_length=1,
-        description="Question submitted by the user"
+        description="Question to search in the UoM knowledge base."
     )
 
     top_k: int = Field(
         default=3,
         ge=1,
         le=10,
-        description="Maximum semantic results to retrieve"
+        description="Maximum number of retrieval results."
+    )
+
+
+class ChatRequest(BaseModel):
+
+    question: str = Field(
+        ...,
+        min_length=1,
+        description="Student question for the UoM AI chatbot."
+    )
+
+    top_k: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description=(
+            "Maximum number of knowledge records supplied "
+            "to the chatbot."
+        )
     )
 
 
@@ -48,13 +64,10 @@ class RetrievalRequest(BaseModel):
 
 @app.get("/")
 def root():
-    """
-    Basic API information.
-    """
 
     return {
-        "service": "UoM AI Chatbot Retrieval API",
-        "version": "1.0.0",
+        "service": "UoM AI Chatbot API",
+        "version": "2.0.0",
         "status": "running"
     }
 
@@ -65,13 +78,11 @@ def root():
 
 @app.get("/health")
 def health():
-    """
-    Used to verify that the API is running.
-    """
 
     return {
         "status": "ok",
-        "retriever": "available"
+        "retriever": "available",
+        "chat_engine": "available"
     }
 
 
@@ -80,14 +91,14 @@ def health():
 # =========================================================
 
 @app.post("/retrieve")
-def retrieve_records(request: RetrievalRequest):
-    """
-    Retrieve relevant UoM records for a user question.
-    """
+def retrieve_records(
+    request: RetrievalRequest
+):
 
     try:
 
         question = request.question.strip()
+
 
         if not question:
 
@@ -104,7 +115,7 @@ def retrieve_records(request: RetrievalRequest):
 
 
         # -------------------------------------------------
-        # No relevant information found
+        # No relevant information
         # -------------------------------------------------
 
         if not results:
@@ -114,21 +125,23 @@ def retrieve_records(request: RetrievalRequest):
                 "has_results": False,
                 "result_count": 0,
                 "message": (
-                    "No relevant UoM information "
-                    "was found for this question."
+                    "No relevant UoM information was "
+                    "found for this question."
                 ),
                 "results": []
             }
 
 
         # -------------------------------------------------
-        # Relevant information found
+        # Successful retrieval
         # -------------------------------------------------
 
         return {
             "question": question,
             "has_results": True,
-            "result_count": len(results),
+            "result_count": len(
+                results
+            ),
             "retrieval_mode": results[0].get(
                 "retrieval_mode",
                 "unknown"
@@ -145,10 +158,60 @@ def retrieve_records(request: RetrievalRequest):
     except Exception as error:
 
         print(
-            f"Retrieval API error: {error}"
+            "Retrieval API error:",
+            str(error)
         )
 
         raise HTTPException(
             status_code=500,
-            detail="An error occurred during retrieval."
+            detail="Internal retrieval error."
+        )
+
+
+# =========================================================
+# Chat endpoint
+# =========================================================
+
+@app.post("/chat")
+def chat(
+    request: ChatRequest
+):
+
+    try:
+
+        question = request.question.strip()
+
+
+        if not question:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Question cannot be empty."
+            )
+
+
+        response = answer_question(
+            question=question,
+            top_k=request.top_k
+        )
+
+
+        return response
+
+
+    except HTTPException:
+
+        raise
+
+
+    except Exception as error:
+
+        print(
+            "Chat API error:",
+            str(error)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Internal chatbot error."
         )
